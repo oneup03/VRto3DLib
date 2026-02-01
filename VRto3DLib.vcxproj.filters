@@ -23,6 +23,9 @@
     <ClInclude Include="include\vrto3dlib\overlay_mgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vrto3dlib\debug_log.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\app_id_mgr.cpp">

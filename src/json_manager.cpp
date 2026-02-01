@@ -17,7 +17,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include "vrto3dlib/json_manager.h"
-#include "driverlog.h"
+#include "vrto3dlib/debug_log.hpp"
 #include "vrto3dlib/key_mappings.h"
 
 #include <windows.h>
@@ -54,7 +54,7 @@ std::string JsonManager::getDocumentsFolderPath() {
         return std::string(charPath) + "\\My Games\\vrto3d";
     }
     else {
-        DriverLog("Failed to get Documents folder path\n");
+        LOG() << "Failed to get Documents folder path";
         return "";
     }
 }
@@ -79,10 +79,10 @@ void JsonManager::writeJsonToFile(const std::string& fileName, const nlohmann::o
     if (file.is_open()) {
         file << jsonData.dump(4); // Pretty-print the JSON with an indent of 4 spaces
         file.close();
-        DriverLog("Saved profile: %s\n", fileName.c_str());
+        LOG() << "Saved profile: " << fileName;
     }
     else {
-        DriverLog("Failed to save profile: %s\n", fileName.c_str());
+        LOG() << "Failed to save profile: " << fileName;
     }
 }
 
@@ -150,26 +150,26 @@ void JsonManager::EnsureDefaultConfigExists()
     // Check if the file exists
     std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
     if (!std::filesystem::exists(filePath)) {
-        DriverLog("%s does not exist. Writing default config to file...\n", DEF_CFG.c_str());
+        LOG() << DEF_CFG << " does not exist. Writing default config to file...";
 
         // Write the default JSON to file
         std::ofstream file(filePath);
         if (file.is_open()) {
             file << default_config_.dump(4); // Pretty-print with 4 spaces of indentation
             file.close();
-            DriverLog("Default config written to %s\n", DEF_CFG.c_str());
+            LOG() << "Default config written to " << DEF_CFG;
         }
         else {
-            DriverLog("Failed to open %s for writing\n", DEF_CFG.c_str());
+            LOG() << "Failed to open " << DEF_CFG << " for writing";
         }
     }
     else {
-        DriverLog("Default config already exists. Checking for missing/default keys...\n");
+        LOG() << "Default config already exists. Checking for missing/default keys...";
 
         nlohmann::json existing_json = readJsonFromFile(DEF_CFG);
         nlohmann::ordered_json merged_json = reorderFillJson(existing_json);
         writeJsonToFile(DEF_CFG, merged_json);
-        DriverLog("Updated config written with defaults filled in");
+        LOG() << "Updated config written with defaults filled in";
     }
 }
 
@@ -221,7 +221,7 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.sleep_count_max = (int)(floor(1600.0 / (1000.0 / config.display_frequency)));
     }
     catch (const nlohmann::json::exception& e) {
-        DriverLog("Error reading default_config.json: %s\n", e.what());
+        LOG() << "Error reading default_config.json: " << e.what();
     }
 }
 
@@ -236,7 +236,7 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         nlohmann::json jsonConfig = readJsonFromFile(filename);
 
         if (jsonConfig.is_null() && filename != DEF_CFG) {
-            DriverLog("No profile found for %s\n", filename.c_str());
+            LOG() << "No profile found for " << filename;
             return false;
         }
 
@@ -351,7 +351,7 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
 
     }
     catch (const nlohmann::json::exception& e) {
-        DriverLog("Error reading config from %s: %s\n", filename.c_str(), e.what());
+        LOG() << "Error reading config from " << filename.c_str() << ": " << e.what();
         return false;
     }
 

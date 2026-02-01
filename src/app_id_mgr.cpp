@@ -21,7 +21,7 @@
 #include <regex>
 
 #include "vrto3dlib/app_id_mgr.h"
-#include "driverlog.h"
+#include "vrto3dlib/debug_log.hpp"
 
 AppIdMgr::AppIdMgr() {
     SetSteamInstallPath();
@@ -48,7 +48,7 @@ void AppIdMgr::SetSteamInstallPath() {
 
     steam_path_ = "";
 
-    DriverLog("Failed to find Steam install path from registry.");
+    LOG() << "Failed to find Steam install path from registry.";
 }
 
 
@@ -57,14 +57,14 @@ void AppIdMgr::SetSteamInstallPath() {
 //-----------------------------------------------------------------------------
 std::vector<std::string> AppIdMgr::GetSteamAppIDs() {
     if (steam_path_.empty()) {
-        DriverLog("Steam install path is empty. Cannot read logs.");
+        LOG() << "Steam install path is empty. Cannot read logs.";
         return {};
     }
 
     std::string logFilePath = steam_path_ + "\\logs\\vrserver.txt";
     std::ifstream logFile(logFilePath);
     if (!logFile) {
-        DriverLog("Failed to open log file: %s", logFilePath.c_str());
+        LOG() << "Failed to open log file: " << logFilePath;
         return {};
     }
 
