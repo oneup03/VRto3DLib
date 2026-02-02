@@ -24,6 +24,7 @@
     <ClInclude Include="include\vrto3dlib\json_manager.h" />
     <ClInclude Include="include\vrto3dlib\key_mappings.h" />
     <ClInclude Include="include\vrto3dlib\overlay_mgr.h" />
+    <ClInclude Include="include\vrto3dlib\win32_helper.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\app_id_mgr.cpp" />

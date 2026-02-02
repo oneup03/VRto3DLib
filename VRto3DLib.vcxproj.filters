@@ -26,6 +26,9 @@
     <ClInclude Include="include\vrto3dlib\debug_log.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vrto3dlib\win32_helper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\app_id_mgr.cpp">
