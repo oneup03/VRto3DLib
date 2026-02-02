@@ -17,6 +17,7 @@
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN
+#include <cmath>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -25,6 +26,8 @@
 #include <XInput.h>
 
 #include "vrto3dlib/debug_log.hpp"
+#include "vrto3dlib/key_mappings.h"
+#include "vrto3dlib/stereo_config.h"
 
 
  // Link the XInput library
@@ -80,10 +83,170 @@ static void SwitchToXinpuGetStateEx()
 
 
 //-----------------------------------------------------------------------------
+// Purpose: Get XInput button state including triggers as buttons
+//-----------------------------------------------------------------------------
+inline bool GetXInputButtonState(DWORD& outButtons, DWORD userIndex = 0)
+{
+    XINPUT_STATE state{};
+    if (_XInputGetState(userIndex, &state) != ERROR_SUCCESS) {
+        outButtons = 0;
+        return false;
+    }
+
+    DWORD buttons = state.Gamepad.wButtons;
+
+    if (state.Gamepad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
+        buttons |= XINPUT_GAMEPAD_LEFT_TRIGGER;
+
+    if (state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
+        buttons |= XINPUT_GAMEPAD_RIGHT_TRIGGER;
+
+    outButtons = buttons;
+    return true;
+}
+
+
+//-----------------------------------------------------------------------------
 // Purpose: Cleaner check for key down state
 //-----------------------------------------------------------------------------
 inline auto isDown = [](int vk) { return GetAsyncKeyState(vk) & 0x8000; };
 inline auto isCtrlDown = [&]() { return isDown(VK_CONTROL); };
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Signify Operation Success
+//-----------------------------------------------------------------------------
+static void BeepSuccess()
+{
+    // High beep for success
+    Beep(400, 400);
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Signify Operation Failure
+//-----------------------------------------------------------------------------
+static void BeepFailure()
+{
+    // Brnk, dunk sound for failure.
+    Beep(300, 200); Beep(200, 150);
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Check if two floats are nearly equal within a max delta
+//-----------------------------------------------------------------------------
+inline bool NearlyEqual(float a, float b, float maxDelta = 0.001f)
+{
+    return std::fabs(a - b) <= maxDelta;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Check and apply user settings hotkeys
+//-----------------------------------------------------------------------------
+struct DepthConvBackend
+{
+    float (*getDepth)(void* ctx);
+    float (*getConv)(void* ctx);
+    void  (*setDepth)(void* ctx, float v);
+    void  (*setConv)(void* ctx, float v);
+
+    void (*onApplied)(void* ctx) = nullptr; // optional
+    void* ctx = nullptr;
+};
+
+inline std::string ApplyUserSettingsHotkeys(
+    StereoDisplayDriverConfiguration& cfg,
+    bool got_xinput,
+    DWORD xstate,
+    const DepthConvBackend& b,
+    float maxDelta = 0.001f)
+{
+    std::string storeMsg;
+
+    auto applied = [&]() {
+        if (b.onApplied) b.onApplied(b.ctx);
+    };
+
+    for (size_t i = 0; i < cfg.num_user_settings; ++i)
+    {
+        if (cfg.sleep_count[i] > 0)
+            cfg.sleep_count[i]--;
+
+        const bool loadPressed =
+            (cfg.load_xinput[i] && got_xinput &&
+                ((xstate & static_cast<DWORD>(cfg.user_load_key[i])) ==
+                    static_cast<DWORD>(cfg.user_load_key[i])))
+            || (!cfg.load_xinput[i] && isDown(cfg.user_load_key[i]));
+
+        if (loadPressed)
+        {
+            const int32_t kt = cfg.user_key_type[i];
+
+            if (kt == HOLD && !cfg.was_held[i])
+            {
+                cfg.prev_depth[i] = b.getDepth(b.ctx);
+                cfg.prev_convergence[i] = b.getConv(b.ctx);
+                cfg.was_held[i] = true;
+
+                b.setDepth(b.ctx, cfg.user_depth[i]);
+                b.setConv(b.ctx, cfg.user_convergence[i]);
+                applied();
+            }
+            else if (kt == TOGGLE && cfg.sleep_count[i] < 1)
+            {
+                cfg.sleep_count[i] = cfg.sleep_count_max;
+
+                const float curD = b.getDepth(b.ctx);
+                const float curC = b.getConv(b.ctx);
+
+                const bool matches =
+                    NearlyEqual(curD, cfg.user_depth[i], maxDelta) &&
+                    NearlyEqual(curC, cfg.user_convergence[i], maxDelta);
+
+                if (matches)
+                {
+                    b.setDepth(b.ctx, cfg.prev_depth[i]);
+                    b.setConv(b.ctx, cfg.prev_convergence[i]);
+                }
+                else
+                {
+                    cfg.prev_depth[i] = curD;
+                    cfg.prev_convergence[i] = curC;
+
+                    b.setDepth(b.ctx, cfg.user_depth[i]);
+                    b.setConv(b.ctx, cfg.user_convergence[i]);
+                }
+                applied();
+            }
+            else if (kt == SWITCH)
+            {
+                b.setDepth(b.ctx, cfg.user_depth[i]);
+                b.setConv(b.ctx, cfg.user_convergence[i]);
+                applied();
+            }
+        }
+        else if (cfg.user_key_type[i] == HOLD && cfg.was_held[i])
+        {
+            cfg.was_held[i] = false;
+            b.setDepth(b.ctx, cfg.prev_depth[i]);
+            b.setConv(b.ctx, cfg.prev_convergence[i]);
+            applied();
+        }
+
+        // Store hotkey
+        if (isDown(cfg.user_store_key[i]))
+        {
+            cfg.user_depth[i] = b.getDepth(b.ctx);
+            cfg.user_convergence[i] = b.getConv(b.ctx);
+            BeepSuccess();
+            storeMsg = "Hotkey " + cfg.user_load_str[i] + " updated";
+        }
+    }
+
+    return storeMsg;
+}
 
 
  //-----------------------------------------------------------------------------
@@ -187,26 +350,6 @@ inline bool IsProcessRunning(DWORD pid) {
 
     CloseHandle(hProcess);
     return isRunning;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Signify Operation Success
-//-----------------------------------------------------------------------------
-static void BeepSuccess()
-{
-    // High beep for success
-    Beep(400, 400);
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Signify Operation Failure
-//-----------------------------------------------------------------------------
-static void BeepFailure()
-{
-    // Brnk, dunk sound for failure.
-    Beep(300, 200); Beep(200, 150);
 }
 
 
