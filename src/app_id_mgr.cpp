@@ -22,33 +22,10 @@
 
 #include "vrto3dlib/app_id_mgr.h"
 #include "vrto3dlib/debug_log.hpp"
+#include "vrto3dlib/win32_helper.hpp"
 
 AppIdMgr::AppIdMgr() {
-    SetSteamInstallPath();
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Retrieve Steam path from registry
-//-----------------------------------------------------------------------------
-void AppIdMgr::SetSteamInstallPath() {
-    HKEY hKey;
-    const char* subKey = "SOFTWARE\\Valve\\Steam";
-    char steamPath[MAX_PATH];
-    DWORD steamPathSize = sizeof(steamPath);
-
-    if (RegOpenKeyExA(HKEY_CURRENT_USER, subKey, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-        if (RegQueryValueExA(hKey, "SteamPath", nullptr, nullptr, (LPBYTE)steamPath, &steamPathSize) == ERROR_SUCCESS) {
-            RegCloseKey(hKey);
-            steam_path_ = std::string(steamPath); // Store the path
-            return;
-        }
-        RegCloseKey(hKey);
-    }
-
-    steam_path_ = "";
-
-    LOG() << "Failed to find Steam install path from registry.";
+    steam_path_ = GetSteamInstallPath();
 }
 
 

@@ -134,6 +134,37 @@ static void BeepFailure()
 
 
 //-----------------------------------------------------------------------------
+// Purpose: Replace forward slashes and remove trailing slashes
+//-----------------------------------------------------------------------------
+inline std::string NormalizeSteamPath(std::string p) {
+    for (auto& c : p) if (c == '/') c = '\\';
+    while (!p.empty() && (p.back() == '\\' || p.back() == '/')) p.pop_back();
+    return p;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Retrieve Steam path from registry
+//-----------------------------------------------------------------------------
+inline std::string GetSteamInstallPath() {
+    HKEY hKey;
+    const char* subKey = "SOFTWARE\\Valve\\Steam";
+    char steamPath[MAX_PATH] = {};
+    DWORD steamPathSize = sizeof(steamPath);
+
+    if (RegOpenKeyExA(HKEY_CURRENT_USER, subKey, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        if (RegQueryValueExA(hKey, "SteamPath", nullptr, nullptr, (LPBYTE)steamPath, &steamPathSize) == ERROR_SUCCESS) {
+            RegCloseKey(hKey);
+            return NormalizeSteamPath(std::string(steamPath));
+        }
+        RegCloseKey(hKey);
+    }
+    LOG() << "Failed to find Steam install path from registry.";
+    return "";
+}
+
+
+//-----------------------------------------------------------------------------
 // Purpose: Check if two floats are nearly equal within a max delta
 //-----------------------------------------------------------------------------
 inline bool NearlyEqual(float a, float b, float maxDelta = 0.001f)
@@ -151,10 +182,13 @@ struct DepthConvBackend
     float (*getConv)(void* ctx);
     void  (*setDepth)(void* ctx, float v);
     void  (*setConv)(void* ctx, float v);
+    float (*getFov)(void* ctx);
+    void  (*setFov)(void* ctx, float v);
 
-    void (*onApplied)(void* ctx) = nullptr; // optional
+    void (*onApplied)(void* ctx) = nullptr; // optional (e.g. mark dirty)
     void* ctx = nullptr;
 };
+
 
 inline std::string ApplyUserSettingsHotkeys(
     StereoDisplayDriverConfiguration& cfg,
@@ -188,10 +222,12 @@ inline std::string ApplyUserSettingsHotkeys(
             {
                 cfg.prev_depth[i] = b.getDepth(b.ctx);
                 cfg.prev_convergence[i] = b.getConv(b.ctx);
+                cfg.prev_fov[i] = b.getFov(b.ctx);
                 cfg.was_held[i] = true;
 
                 b.setDepth(b.ctx, cfg.user_depth[i]);
                 b.setConv(b.ctx, cfg.user_convergence[i]);
+                b.setFov(b.ctx, cfg.user_fov[i]);
                 applied();
             }
             else if (kt == TOGGLE && cfg.sleep_count[i] < 1)
@@ -200,23 +236,28 @@ inline std::string ApplyUserSettingsHotkeys(
 
                 const float curD = b.getDepth(b.ctx);
                 const float curC = b.getConv(b.ctx);
+                const float curF = b.getFov(b.ctx);
 
                 const bool matches =
                     NearlyEqual(curD, cfg.user_depth[i], maxDelta) &&
-                    NearlyEqual(curC, cfg.user_convergence[i], maxDelta);
+                    NearlyEqual(curC, cfg.user_convergence[i], maxDelta) &&
+                    NearlyEqual(curF, cfg.user_fov[i], maxDelta);
 
                 if (matches)
                 {
                     b.setDepth(b.ctx, cfg.prev_depth[i]);
                     b.setConv(b.ctx, cfg.prev_convergence[i]);
+                    b.setFov(b.ctx, cfg.prev_fov[i]);
                 }
                 else
                 {
                     cfg.prev_depth[i] = curD;
                     cfg.prev_convergence[i] = curC;
+                    cfg.prev_fov[i] = curF;
 
                     b.setDepth(b.ctx, cfg.user_depth[i]);
                     b.setConv(b.ctx, cfg.user_convergence[i]);
+                    b.setFov(b.ctx, cfg.user_fov[i]);
                 }
                 applied();
             }
@@ -224,22 +265,27 @@ inline std::string ApplyUserSettingsHotkeys(
             {
                 b.setDepth(b.ctx, cfg.user_depth[i]);
                 b.setConv(b.ctx, cfg.user_convergence[i]);
+                b.setFov(b.ctx, cfg.user_fov[i]);
                 applied();
             }
         }
         else if (cfg.user_key_type[i] == HOLD && cfg.was_held[i])
         {
             cfg.was_held[i] = false;
+
             b.setDepth(b.ctx, cfg.prev_depth[i]);
             b.setConv(b.ctx, cfg.prev_convergence[i]);
+            b.setFov(b.ctx, cfg.prev_fov[i]);
             applied();
         }
 
-        // Store hotkey
+        // Store hotkey (VRto3D behavior, shared)
         if (isDown(cfg.user_store_key[i]))
         {
             cfg.user_depth[i] = b.getDepth(b.ctx);
             cfg.user_convergence[i] = b.getConv(b.ctx);
+            cfg.user_fov[i] = b.getFov(b.ctx);
+
             BeepSuccess();
             storeMsg = "Hotkey " + cfg.user_load_str[i] + " updated";
         }
@@ -247,6 +293,7 @@ inline std::string ApplyUserSettingsHotkeys(
 
     return storeMsg;
 }
+
 
 
  //-----------------------------------------------------------------------------

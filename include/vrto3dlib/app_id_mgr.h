@@ -26,7 +26,6 @@ public:
     std::vector<std::string> GetSteamAppIDs();
 
 private:
-    void SetSteamInstallPath();
 
     std::unordered_set<std::string> excluded_app_keys_ = {
         "system.systemui",

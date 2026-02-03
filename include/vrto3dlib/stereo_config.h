@@ -84,8 +84,10 @@ struct StereoDisplayDriverConfiguration
     std::vector<std::string> user_type_str;
     std::vector<float> user_depth;
     std::vector<float> user_convergence;
+    std::vector<float> user_fov;
     std::vector<float> prev_depth;
     std::vector<float> prev_convergence;
+    std::vector<float> prev_fov;
     std::vector<bool> was_held;
     std::vector<bool> load_xinput;
     std::vector<int32_t> sleep_count;

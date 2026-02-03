@@ -19,6 +19,7 @@
 #include "vrto3dlib/json_manager.h"
 #include "vrto3dlib/debug_log.hpp"
 #include "vrto3dlib/key_mappings.h"
+#include "vrto3dlib/win32_helper.hpp"
 
 #include <windows.h>
 #include <shlobj.h>
@@ -32,30 +33,11 @@
 #include <nlohmann/json.hpp>
 
 JsonManager::JsonManager() {
-    vrto3dFolder = getDocumentsFolderPath();
+    vrto3dFolder = GetSteamInstallPath();
     if (vrto3dFolder != "")
     {
+        vrto3dFolder += "\\config\\vrto3d";
         createFolderIfNotExist(vrto3dFolder);
-    }
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Get path to user's Documents folder
-//-----------------------------------------------------------------------------
-std::string JsonManager::getDocumentsFolderPath() {
-    PWSTR path = NULL;
-    HRESULT hr = SHGetKnownFolderPath(FOLDERID_Documents, 0, NULL, &path);
-    if (SUCCEEDED(hr)) {
-        char charPath[MAX_PATH];
-        size_t convertedChars = 0;
-        wcstombs_s(&convertedChars, charPath, MAX_PATH, path, _TRUNCATE);
-        CoTaskMemFree(path);
-        return std::string(charPath) + "\\My Games\\vrto3d";
-    }
-    else {
-        LOG() << "Failed to get Documents folder path";
-        return "";
     }
 }
 
@@ -71,7 +53,7 @@ void JsonManager::createFolderIfNotExist(const std::string& path) {
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Write a JSON to Documents/My Games/vrto3d
+// Purpose: Write a JSON to Steam/config/vrto3d
 //-----------------------------------------------------------------------------
 void JsonManager::writeJsonToFile(const std::string& fileName, const nlohmann::ordered_json& jsonData) {
     std::string filePath = vrto3dFolder + "\\" + fileName;
@@ -88,7 +70,7 @@ void JsonManager::writeJsonToFile(const std::string& fileName, const nlohmann::o
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Read a JSON from Documents/My Games/vrto3d
+// Purpose: Read a JSON from Steam/config/vrto3d
 //-----------------------------------------------------------------------------
 nlohmann::json JsonManager::readJsonFromFile(const std::string& fileName) {
     std::string filePath = vrto3dFolder + "\\" + fileName;
@@ -307,8 +289,10 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         config.user_key_type.resize(config.num_user_settings);
         config.user_depth.resize(config.num_user_settings);
         config.user_convergence.resize(config.num_user_settings);
+        config.user_fov.resize(config.num_user_settings);
         config.prev_depth.resize(config.num_user_settings);
         config.prev_convergence.resize(config.num_user_settings);
+        config.prev_fov.resize(config.num_user_settings);
         config.was_held.resize(config.num_user_settings);
         config.load_xinput.resize(config.num_user_settings);
         config.sleep_count.resize(config.num_user_settings);
@@ -347,6 +331,12 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
 
             config.user_depth[i] = user_setting.at("user_depth").get<float>();
             config.user_convergence[i] = user_setting.at("user_convergence").get<float>();
+            if (user_setting.contains("user_fov") && user_setting["user_fov"].is_number()) {
+                config.user_fov[i] = user_setting["user_fov"].get<float>();
+            }
+            else {
+                config.user_fov[i] = config.fov;
+            }
         }
 
     }
@@ -360,7 +350,7 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Save Game Specific Settings to Documents\My games\vrto3d\app_name_config.json
+// Purpose: Save Game Specific Settings to Steam\config\vrto3d\app_name_config.json
 //-----------------------------------------------------------------------------
 void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDriverConfiguration& config)
 {
@@ -390,6 +380,7 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
         userSettings["user_key_type"] = config.user_type_str[i];
         userSettings["user_depth"] = config.user_depth[i];
         userSettings["user_convergence"] = config.user_convergence[i];
+        userSettings["user_fov"] = config.user_fov[i];
 
         // Append to JSON array in the main config
         jsonConfig["user_settings"].push_back(userSettings);

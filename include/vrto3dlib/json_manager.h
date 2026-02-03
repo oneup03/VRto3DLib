@@ -90,13 +90,13 @@ private:
                 {"user_store_key", "VK_NUMPAD6"},
                 {"user_key_type", "hold"},
                 {"user_depth", 0.065},
-                {"user_convergence", 1.0}
+                {"user_convergence", 1.0},
+                {"user_fov", 50.0}
             }
         }}
     };
     
     std::string vrto3dFolder;
-    std::string getDocumentsFolderPath();
     void writeJsonToFile(const std::string& fileName, const nlohmann::ordered_json& jsonData);
     nlohmann::json readJsonFromFile(const std::string& fileName);
     nlohmann::ordered_json reorderFillJson(const nlohmann::json& target_json);
