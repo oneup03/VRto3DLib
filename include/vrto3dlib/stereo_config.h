@@ -61,6 +61,7 @@ struct StereoDisplayDriverConfiguration
     bool yaw_set;
     bool use_open_track;
     int32_t open_track_port;
+    std::string launch_script;
     int32_t pose_reset_key;
     std::string pose_reset_str;
     bool reset_xinput;

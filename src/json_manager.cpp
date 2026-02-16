@@ -197,6 +197,7 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.auto_focus = getValue<bool>(jsonConfig, "auto_focus");
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");
         config.open_track_port = getValue<int>(jsonConfig, "open_track_port");
+        config.launch_script = getValue<std::string>(jsonConfig, "launch_script");
 
         config.display_latency = getValue<float>(jsonConfig, "display_latency");
         config.display_frequency = getValue<float>(jsonConfig, "display_frequency");

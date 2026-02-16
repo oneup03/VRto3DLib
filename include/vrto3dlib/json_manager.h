@@ -64,6 +64,7 @@ private:
         {"yaw_enable", false},
         {"use_open_track", false},
         {"open_track_port", 4242},
+        {"launch_script", ""},
         {"pose_reset_key", "VK_NUMPAD7"},
         {"ctrl_toggle_key", "VK_NUMPAD8"},
         {"ctrl_toggle_type", "toggle"},
