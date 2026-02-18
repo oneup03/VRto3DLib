@@ -178,8 +178,7 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         nlohmann::json jsonConfig = readJsonFromFile(DEF_CFG);
 
         // Load values directly from the base level of the JSON
-        config.window_width = getValue<int>(jsonConfig, "window_width");
-        config.window_height = getValue<int>(jsonConfig, "window_height");
+        config.display_index = getValue<int>(jsonConfig, "display_index");
         config.render_width = getValue<int>(jsonConfig, "render_width");
         config.render_height = getValue<int>(jsonConfig, "render_height");
         

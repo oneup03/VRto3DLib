@@ -23,6 +23,8 @@
 // Configuration for VRto3D
 struct StereoDisplayDriverConfiguration
 {
+    int32_t display_index;
+
     int32_t window_x;
     int32_t window_y;
 
