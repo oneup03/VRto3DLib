@@ -188,29 +188,9 @@ struct MonitorBounds
     uint32_t width = 0;
     uint32_t height = 0;
     bool is_primary = false;
-    int32_t display_index = 0; // Windows DISPLAY# (1-based)
+    int32_t display_index = 0; // Monitor enumeration order (1-based)
     std::string device_name;
 };
-
-
-inline int32_t ParseDisplayIndexFromDeviceName(const char* device_name)
-{
-    if (device_name == nullptr) {
-        return 0;
-    }
-
-    const char* display_token = std::strstr(device_name, "DISPLAY");
-    if (display_token == nullptr) {
-        return 0;
-    }
-
-    display_token += std::strlen("DISPLAY");
-    if (*display_token == '\0' || !std::isdigit(static_cast<unsigned char>(*display_token))) {
-        return 0;
-    }
-
-    return static_cast<int32_t>(std::atoi(display_token));
-}
 
 
 inline BOOL CALLBACK EnumMonitorBoundsProc(HMONITOR monitor, HDC, LPRECT, LPARAM user_data)
@@ -230,7 +210,7 @@ inline BOOL CALLBACK EnumMonitorBoundsProc(HMONITOR monitor, HDC, LPRECT, LPARAM
     bounds.height = static_cast<uint32_t>(info.rcMonitor.bottom - info.rcMonitor.top);
     bounds.is_primary = (info.dwFlags & MONITORINFOF_PRIMARY) != 0;
     bounds.device_name = info.szDevice;
-    bounds.display_index = ParseDisplayIndexFromDeviceName(info.szDevice);
+    bounds.display_index = static_cast<int32_t>(monitors->size()) + 1;
     monitors->push_back(bounds);
 
     return TRUE;
@@ -256,7 +236,7 @@ inline bool ResolveMonitorBoundsByDisplayIndex(
     LOG() << "Detected " << static_cast<int>(monitors.size()) << " active monitor(s)";
     for (const auto& monitor : monitors) {
         LOG()
-            << "Display " << monitor.display_index
+            << "Display order " << monitor.display_index
             << " (" << monitor.device_name.c_str() << ")"
             << (monitor.is_primary ? " [primary]" : "")
             << " bounds=(" << monitor.x << "," << monitor.y << " " << monitor.width << "x" << monitor.height << ")";
@@ -277,11 +257,10 @@ inline bool ResolveMonitorBoundsByDisplayIndex(
         return used_primary_default;
     }
 
-    for (const auto& monitor : monitors) {
-        if (monitor.display_index == requested_display_index) {
-            out_bounds = monitor;
-            return true;
-        }
+    const int32_t monitor_count = static_cast<int32_t>(monitors.size());
+    if (requested_display_index <= monitor_count) {
+        out_bounds = monitors[static_cast<size_t>(requested_display_index - 1)];
+        return true;
     }
 
     used_primary_fallback = pick_primary();
@@ -311,21 +290,21 @@ inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration
 
     if (used_primary_default) {
         LOG()
-            << "display_index not set. Using primary display " << selected.display_index
+            << "display_index=0 (auto). Using primary display order " << selected.display_index
             << " (" << selected.device_name.c_str() << ") for window bounds ("
             << selected.x << "," << selected.y << " " << selected.width << "x" << selected.height << ")";
     }
     else if (used_primary_fallback) {
         LOG()
             << "Configured display_index=" << config.display_index
-            << " is unavailable. Falling back to primary display " << selected.display_index
+            << " is unavailable. Falling back to primary display order " << selected.display_index
             << " (" << selected.device_name.c_str() << ") for window bounds ("
             << selected.x << "," << selected.y << " " << selected.width << "x" << selected.height << ")";
     }
     else {
         LOG()
             << "Using display_index=" << config.display_index
-            << " (" << selected.device_name.c_str() << ") for window bounds ("
+            << " (display order " << selected.display_index << ", " << selected.device_name.c_str() << ") for window bounds ("
             << selected.x << "," << selected.y << " " << selected.width << "x" << selected.height << ")";
     }
 
