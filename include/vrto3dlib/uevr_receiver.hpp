@@ -127,6 +127,37 @@ public:
         return (std::isfinite(hint) && hint > 0.0f && hint < 2.0f) ? hint : 0.0f;
     }
 
+    // ----- Depth Commands (UEVR -> VRto3D) -----
+
+    uint8_t get_depth_request() const {
+        if (!m_data) return 0;
+        return m_data->auto_depth_request;
+    }
+
+    void clear_depth_request() {
+        if (m_data) m_data->auto_depth_request = 0;
+    }
+
+    float get_world_scale() const {
+        if (!has_valid_data()) return 100.0f;
+        float ws = m_data->world_scale;
+        return (std::isfinite(ws) && ws > 0.0f) ? ws : 100.0f;
+    }
+
+    /**
+     * Calculate stereo depth + convergence from world_scale.
+     * Formula tuned from 136+ game profiles.
+     */
+    bool calculate_auto_stereo(float& out_depth, float& out_convergence) const {
+        if (!has_valid_data()) return false;
+        float ws = get_world_scale();
+        if (ws < 0.1f) return false;
+        float scale_factor = ws / 100.0f;
+        out_depth = (std::max)(0.02f, (std::min)(0.08f * scale_factor, 0.50f));
+        out_convergence = 1.0f;
+        return true;
+    }
+
 private:
     Receiver() = default;
     ~Receiver() { shutdown(); }
