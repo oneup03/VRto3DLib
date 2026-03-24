@@ -164,7 +164,7 @@ inline std::string GetSteamInstallPath() {
         }
         RegCloseKey(hKey);
     }
-    LOG() << "Failed to find Steam install path from registry.";
+    OutputDebugStringA("VRto3D: Failed to find Steam install path from registry.\n");
     return "";
 }
 
