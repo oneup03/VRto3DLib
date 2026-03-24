@@ -24,6 +24,7 @@
 struct StereoDisplayDriverConfiguration
 {
     int32_t display_index;
+    bool multi_display;
 
     int32_t window_x;
     int32_t window_y;

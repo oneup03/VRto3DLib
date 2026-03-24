@@ -39,6 +39,7 @@ private:
     // Create the example default JSON
     nlohmann::ordered_json default_config_ = {
         {"display_index", 0},
+        {"multi_display", false},
         {"render_width", 1920},
         {"render_height", 1080},
         {"hmd_height", 1.0},

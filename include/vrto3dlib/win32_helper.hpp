@@ -17,6 +17,7 @@
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
@@ -221,7 +222,8 @@ inline bool ResolveMonitorBoundsByDisplayIndex(
     int32_t requested_display_index,
     MonitorBounds& out_bounds,
     bool& used_primary_fallback,
-    bool& used_primary_default)
+    bool& used_primary_default,
+    std::vector<MonitorBounds>* out_monitors = nullptr)
 {
     used_primary_fallback = false;
     used_primary_default = false;
@@ -231,6 +233,10 @@ inline bool ResolveMonitorBoundsByDisplayIndex(
 
     if (monitors.empty()) {
         return false;
+    }
+
+    if (out_monitors != nullptr) {
+        *out_monitors = monitors;
     }
 
     LOG() << "Detected " << static_cast<int>(monitors.size()) << " active monitor(s)";
@@ -270,6 +276,7 @@ inline bool ResolveMonitorBoundsByDisplayIndex(
 
 inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration& config)
 {
+    std::vector<MonitorBounds> monitors;
     MonitorBounds selected{};
     bool used_primary_fallback = false;
     bool used_primary_default = false;
@@ -278,7 +285,8 @@ inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration
         config.display_index,
         selected,
         used_primary_fallback,
-        used_primary_default)) {
+        used_primary_default,
+        &monitors)) {
         LOG() << "Failed to resolve monitor bounds. Keeping existing window bounds.";
         return false;
     }
@@ -306,6 +314,32 @@ inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration
             << "Using display_index=" << config.display_index
             << " (display order " << selected.display_index << ", " << selected.device_name.c_str() << ") for window bounds ("
             << selected.x << "," << selected.y << " " << selected.width << "x" << selected.height << ")";
+    }
+
+    if (config.multi_display) {
+        const int32_t contiguous_right_x = selected.x + static_cast<int32_t>(selected.width);
+        const auto right_monitor_it = std::find_if(monitors.begin(), monitors.end(), [&](const MonitorBounds& monitor) {
+            return monitor.x == contiguous_right_x
+                && monitor.y == selected.y
+                && monitor.width == selected.width
+                && monitor.height == selected.height;
+            });
+
+        if (right_monitor_it != monitors.end()) {
+            const MonitorBounds& right_monitor = *right_monitor_it;
+            config.window_width = static_cast<int32_t>(selected.width + right_monitor.width);
+
+            LOG()
+                << "multi_display=true. Found contiguous right display order " << right_monitor.display_index
+                << " (" << right_monitor.device_name.c_str() << ") with matching bounds; using two-display span ("
+                << config.window_x << "," << config.window_y << " " << config.window_width << "x" << config.window_height << ")";
+        }
+        else {
+            LOG()
+                << "multi_display=true but no contiguous right display matched required bounds (same width/height, same top Y, exact right adjacency)."
+                << " Keeping single-display bounds ("
+                << config.window_x << "," << config.window_y << " " << config.window_width << "x" << config.window_height << ")";
+        }
     }
 
     return true;

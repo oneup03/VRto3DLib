@@ -179,6 +179,7 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
 
         // Load values directly from the base level of the JSON
         config.display_index = getValue<int>(jsonConfig, "display_index");
+        config.multi_display = getValue<bool>(jsonConfig, "multi_display");
         config.render_width = getValue<int>(jsonConfig, "render_width");
         config.render_height = getValue<int>(jsonConfig, "render_height");
         
