@@ -196,6 +196,13 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.dash_enable = getValue<bool>(jsonConfig, "dash_enable");
         config.auto_focus = getValue<bool>(jsonConfig, "auto_focus");
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");
+        config.use_track_filter = getValue<bool>(jsonConfig, "use_track_filter");
+        config.track_filter_rotation_sensitivity = getValue<float>(jsonConfig, "track_filter_rotation_sensitivity");
+        config.track_filter_translation_sensitivity = getValue<float>(jsonConfig, "track_filter_translation_sensitivity");
+        config.track_filter_rotation_deadzone = getValue<float>(jsonConfig, "track_filter_rotation_deadzone");
+        config.track_filter_translation_deadzone = getValue<float>(jsonConfig, "track_filter_translation_deadzone");
+        config.track_filter_zoom_smoothing = getValue<float>(jsonConfig, "track_filter_zoom_smoothing");
+        config.track_filter_max_zoom = getValue<float>(jsonConfig, "track_filter_max_zoom");
         config.open_track_port = getValue<int>(jsonConfig, "open_track_port");
         config.launch_script = getValue<std::string>(jsonConfig, "launch_script");
 
@@ -238,6 +245,13 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         config.pitch_set = config.pitch_enable;
         config.yaw_enable = getValue<bool>(jsonConfig, "yaw_enable");
         config.yaw_set = config.yaw_enable;
+        config.use_track_filter = getValue<bool>(jsonConfig, "use_track_filter");
+        config.track_filter_rotation_sensitivity = getValue<float>(jsonConfig, "track_filter_rotation_sensitivity");
+        config.track_filter_translation_sensitivity = getValue<float>(jsonConfig, "track_filter_translation_sensitivity");
+        config.track_filter_rotation_deadzone = getValue<float>(jsonConfig, "track_filter_rotation_deadzone");
+        config.track_filter_translation_deadzone = getValue<float>(jsonConfig, "track_filter_translation_deadzone");
+        config.track_filter_zoom_smoothing = getValue<float>(jsonConfig, "track_filter_zoom_smoothing");
+        config.track_filter_max_zoom = getValue<float>(jsonConfig, "track_filter_max_zoom");
 
         config.pose_reset_str = getValue<std::string>(jsonConfig, "pose_reset_key");
         
@@ -366,6 +380,13 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
     jsonConfig["async_enable"] = config.async_enable;
     jsonConfig["pitch_enable"] = config.pitch_enable;
     jsonConfig["yaw_enable"] = config.yaw_enable;
+    jsonConfig["use_track_filter"] = config.use_track_filter;
+    jsonConfig["track_filter_rotation_sensitivity"] = config.track_filter_rotation_sensitivity;
+    jsonConfig["track_filter_translation_sensitivity"] = config.track_filter_translation_sensitivity;
+    jsonConfig["track_filter_rotation_deadzone"] = config.track_filter_rotation_deadzone;
+    jsonConfig["track_filter_translation_deadzone"] = config.track_filter_translation_deadzone;
+    jsonConfig["track_filter_zoom_smoothing"] = config.track_filter_zoom_smoothing;
+    jsonConfig["track_filter_max_zoom"] = config.track_filter_max_zoom;
     jsonConfig["pose_reset_key"] = config.pose_reset_str;
     jsonConfig["ctrl_toggle_key"] = config.ctrl_toggle_str;
     jsonConfig["ctrl_toggle_type"] = config.ctrl_type_str;

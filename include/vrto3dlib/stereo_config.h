@@ -63,7 +63,14 @@ struct StereoDisplayDriverConfiguration
     bool pitch_set;
     bool yaw_set;
     bool use_open_track;
+    bool use_track_filter;
     int32_t open_track_port;
+    float track_filter_rotation_sensitivity;
+    float track_filter_translation_sensitivity;
+    float track_filter_rotation_deadzone;
+    float track_filter_translation_deadzone;
+    float track_filter_zoom_smoothing;
+    float track_filter_max_zoom;
     std::string launch_script;
     int32_t pose_reset_key;
     std::string pose_reset_str;
