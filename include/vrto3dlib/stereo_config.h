@@ -63,8 +63,8 @@ struct StereoDisplayDriverConfiguration
     bool pitch_set;
     bool yaw_set;
     bool use_open_track;
-    bool use_track_filter;
     int32_t open_track_port;
+    bool use_track_filter;
     float track_filter_rotation_sensitivity;
     float track_filter_translation_sensitivity;
     float track_filter_rotation_deadzone;
