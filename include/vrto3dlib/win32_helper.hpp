@@ -217,6 +217,95 @@ inline std::string GetSteamInstallPath() {
 
 
 //-----------------------------------------------------------------------------
+// Purpose: Write OpenXR ActiveRuntime for a specific registry hive
+//-----------------------------------------------------------------------------
+inline bool SetOpenXRActiveRuntimeForHive(HKEY hive, const char* hive_name, const std::string& runtime_json_path)
+{
+    const char* openxr_sub_key = "SOFTWARE\\Khronos\\OpenXR\\1";
+    HKEY key = nullptr;
+
+    REGSAM access_mask = KEY_SET_VALUE;
+    if (hive == HKEY_LOCAL_MACHINE) {
+        access_mask |= KEY_WOW64_64KEY;
+    }
+
+    const LONG create_result = RegCreateKeyExA(
+        hive,
+        openxr_sub_key,
+        0,
+        nullptr,
+        REG_OPTION_NON_VOLATILE,
+        access_mask,
+        nullptr,
+        &key,
+        nullptr);
+
+    if (create_result != ERROR_SUCCESS) {
+        LOG() << "Failed to open/create OpenXR key in " << hive_name
+            << " (error=" << static_cast<int>(create_result) << ")";
+        return false;
+    }
+
+    const DWORD data_size = static_cast<DWORD>(runtime_json_path.size() + 1);
+    const LONG set_result = RegSetValueExA(
+        key,
+        "ActiveRuntime",
+        0,
+        REG_SZ,
+        reinterpret_cast<const BYTE*>(runtime_json_path.c_str()),
+        data_size);
+
+    RegCloseKey(key);
+
+    if (set_result != ERROR_SUCCESS) {
+        LOG() << "Failed to set OpenXR ActiveRuntime in " << hive_name
+            << " (error=" << static_cast<int>(set_result) << ")";
+        return false;
+    }
+
+    LOG() << "Set OpenXR ActiveRuntime in " << hive_name << " to: " << runtime_json_path.c_str();
+    return true;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Set OpenXR runtime to SteamVR
+//-----------------------------------------------------------------------------
+inline bool SetOpenXRRuntimeToSteamVR()
+{
+    const std::string steam_install_path = GetSteamInstallPath();
+    if (steam_install_path.empty()) {
+        LOG() << "Cannot set OpenXR runtime: Steam install path was not found.";
+        return false;
+    }
+
+    const std::filesystem::path runtime_json_path =
+        std::filesystem::path(steam_install_path) / "steamapps" / "common" / "SteamVR" / "steamxr_win64.json";
+
+    if (!std::filesystem::exists(runtime_json_path)) {
+        LOG() << "Cannot set OpenXR runtime: SteamVR runtime json not found at: "
+            << runtime_json_path.string().c_str();
+        return false;
+    }
+
+    const std::string normalized_runtime_path = NormalizeSteamPath(runtime_json_path.string());
+    LOG() << "Attempting to set OpenXR ActiveRuntime to SteamVR runtime: " << normalized_runtime_path.c_str();
+
+    if (SetOpenXRActiveRuntimeForHive(HKEY_CURRENT_USER, "HKCU", normalized_runtime_path)) {
+        return true;
+    }
+
+    LOG() << "HKCU OpenXR ActiveRuntime update failed. Trying HKLM fallback.";
+    if (SetOpenXRActiveRuntimeForHive(HKEY_LOCAL_MACHINE, "HKLM", normalized_runtime_path)) {
+        return true;
+    }
+
+    LOG() << "Failed to set OpenXR ActiveRuntime to SteamVR in both HKCU and HKLM.";
+    return false;
+}
+
+
+//-----------------------------------------------------------------------------
 // Purpose: Check if two floats are nearly equal within a max delta
 //-----------------------------------------------------------------------------
 inline bool NearlyEqual(float a, float b, float maxDelta = 0.001f)
