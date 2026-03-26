@@ -65,12 +65,12 @@ struct StereoDisplayDriverConfiguration
     bool use_open_track;
     int32_t open_track_port;
     bool use_track_filter;
-    float track_filter_rotation_sensitivity;
-    float track_filter_translation_sensitivity;
-    float track_filter_rotation_deadzone;
-    float track_filter_translation_deadzone;
-    float track_filter_zoom_smoothing;
-    float track_filter_max_zoom;
+    float trk_flt_rot_sens;
+    float trk_flt_pos_sens;
+    float trk_flt_rot_dz;
+    float trk_flt_pos_dz;
+    float trk_flt_zoom_smooth;
+    float trk_flt_max_zoom;
     std::string launch_script;
     int32_t pose_reset_key;
     std::string pose_reset_str;

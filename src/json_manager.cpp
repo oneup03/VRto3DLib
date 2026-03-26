@@ -198,12 +198,12 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");
         config.open_track_port = getValue<int>(jsonConfig, "open_track_port");
         config.use_track_filter = getValue<bool>(jsonConfig, "use_track_filter");
-        config.track_filter_rotation_sensitivity = getValue<float>(jsonConfig, "track_filter_rotation_sensitivity");
-        config.track_filter_translation_sensitivity = getValue<float>(jsonConfig, "track_filter_translation_sensitivity");
-        config.track_filter_rotation_deadzone = getValue<float>(jsonConfig, "track_filter_rotation_deadzone");
-        config.track_filter_translation_deadzone = getValue<float>(jsonConfig, "track_filter_translation_deadzone");
-        config.track_filter_zoom_smoothing = getValue<float>(jsonConfig, "track_filter_zoom_smoothing");
-        config.track_filter_max_zoom = getValue<float>(jsonConfig, "track_filter_max_zoom");
+        config.trk_flt_rot_sens = getValue<float>(jsonConfig, "trk_flt_rot_sens");
+        config.trk_flt_pos_sens = getValue<float>(jsonConfig, "trk_flt_pos_sens");
+        config.trk_flt_rot_dz = getValue<float>(jsonConfig, "trk_flt_rot_dz");
+        config.trk_flt_pos_dz = getValue<float>(jsonConfig, "trk_flt_pos_dz");
+        config.trk_flt_zoom_smooth = getValue<float>(jsonConfig, "trk_flt_zoom_smooth");
+        config.trk_flt_max_zoom = getValue<float>(jsonConfig, "trk_flt_max_zoom");
         config.launch_script = getValue<std::string>(jsonConfig, "launch_script");
 
         config.display_latency = getValue<float>(jsonConfig, "display_latency");
@@ -408,12 +408,12 @@ void JsonManager::SaveHmdOffsets(StereoDisplayDriverConfiguration& config)
     existing_json["hmd_x"] = config.hmd_x;
     existing_json["hmd_y"] = config.hmd_y;
     existing_json["hmd_yaw"] = config.hmd_yaw;
-    existing_json["track_filter_rotation_sensitivity"] = config.track_filter_rotation_sensitivity;
-    existing_json["track_filter_translation_sensitivity"] = config.track_filter_translation_sensitivity;
-    existing_json["track_filter_rotation_deadzone"] = config.track_filter_rotation_deadzone;
-    existing_json["track_filter_translation_deadzone"] = config.track_filter_translation_deadzone;
-    existing_json["track_filter_zoom_smoothing"] = config.track_filter_zoom_smoothing;
-    existing_json["track_filter_max_zoom"] = config.track_filter_max_zoom;
+    existing_json["trk_flt_rot_sens"] = config.trk_flt_rot_sens;
+    existing_json["trk_flt_pos_sens"] = config.trk_flt_pos_sens;
+    existing_json["trk_flt_rot_dz"] = config.trk_flt_rot_dz;
+    existing_json["trk_flt_pos_dz"] = config.trk_flt_pos_dz;
+    existing_json["trk_flt_zoom_smooth"] = config.trk_flt_zoom_smooth;
+    existing_json["trk_flt_max_zoom"] = config.trk_flt_max_zoom;
     nlohmann::ordered_json merged_json = reorderFillJson(existing_json);
     writeJsonToFile(DEF_CFG, merged_json);
 }
