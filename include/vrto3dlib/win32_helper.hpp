@@ -150,6 +150,52 @@ inline std::string NormalizeSteamPath(std::string p) {
 
 
 //-----------------------------------------------------------------------------
+// Purpose: Convert UTF-16 strings to UTF-8 safely
+//-----------------------------------------------------------------------------
+inline std::string WideToUtf8(const wchar_t* wide)
+{
+    if (!wide || *wide == L'\0') {
+        return {};
+    }
+
+    const int required_size = WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        wide,
+        -1,
+        nullptr,
+        0,
+        nullptr,
+        nullptr);
+
+    if (required_size <= 0) {
+        return {};
+    }
+
+    std::string utf8(static_cast<size_t>(required_size), '\0');
+    const int converted = WideCharToMultiByte(
+        CP_UTF8,
+        0,
+        wide,
+        -1,
+        utf8.data(),
+        required_size,
+        nullptr,
+        nullptr);
+
+    if (converted <= 0) {
+        return {};
+    }
+
+    if (!utf8.empty() && utf8.back() == '\0') {
+        utf8.pop_back();
+    }
+
+    return utf8;
+}
+
+
+//-----------------------------------------------------------------------------
 // Purpose: Retrieve Steam path from registry
 //-----------------------------------------------------------------------------
 inline std::string GetSteamInstallPath() {
@@ -513,8 +559,7 @@ inline std::string GetProcessName(uint32_t processID)
         if (QueryFullProcessImageName(hProcess, 0, processName, &size))
         {
 #ifdef UNICODE
-            std::wstring ws(processName);
-            result.assign(ws.begin(), ws.end());
+            result = WideToUtf8(processName);
 #else
             result.assign(processName);
 #endif
