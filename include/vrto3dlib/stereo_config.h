@@ -21,72 +21,73 @@
 
 
 // Configuration for VRto3D
+// Default values mirror default_config_ in json_manager.h — keep in sync.
 struct StereoDisplayDriverConfiguration
 {
-    int32_t display_index;
-    bool multi_display;
+    int32_t display_index    = 0;
+    bool multi_display       = false;
 
-    int32_t window_x;
-    int32_t window_y;
+    int32_t window_x         = 0;
+    int32_t window_y         = 0;
 
-    int32_t window_width;
-    int32_t window_height;
+    int32_t window_width     = 0;
+    int32_t window_height    = 0;
 
-    int32_t render_width;
-    int32_t render_height;
+    int32_t render_width     = 1920;
+    int32_t render_height    = 1080;
 
-    float hmd_height;
-    float hmd_x;
-    float hmd_y;
-    float hmd_yaw;
+    float hmd_height         = 1.0f;
+    float hmd_x              = 0.0f;
+    float hmd_y              = 0.0f;
+    float hmd_yaw            = 0.0f;
 
-    float aspect_ratio;
-    float fov;
-    float depth;
-    float convergence;
-    bool async_enable;
-    bool disable_hotkeys;
+    float aspect_ratio       = 1.77778f;
+    float fov                = 90.0f;
+    float depth              = 0.1f;
+    float convergence        = 1.0f;
+    bool async_enable        = false;
+    bool disable_hotkeys     = false;
 
-    bool tab_enable;
-    int32_t framepack_offset;
-    bool reverse_enable;
-    bool vd_fsbs_hack;
-    bool dash_enable;
-    bool auto_focus;
+    bool tab_enable          = false;
+    int32_t framepack_offset = 0;
+    bool reverse_enable      = false;
+    bool vd_fsbs_hack        = false;
+    bool dash_enable         = false;
+    bool auto_focus          = true;
 
-    float display_latency;
-    float display_frequency;
-    int32_t sleep_count_max;
+    float display_latency    = 0.011f;
+    float display_frequency  = 60.0f;
+    int32_t sleep_count_max  = 0;
 
-    bool pitch_enable;
-    bool yaw_enable;
-    bool pitch_set;
-    bool yaw_set;
-    bool use_open_track;
-    int32_t open_track_port;
-    bool use_track_filter;
-    float trk_flt_rot_sens;
-    float trk_flt_pos_sens;
-    float trk_flt_rot_dz;
-    float trk_flt_pos_dz;
-    float trk_flt_zoom_smooth;
-    float trk_flt_max_zoom;
+    bool pitch_enable        = false;
+    bool yaw_enable          = false;
+    bool pitch_set           = false;
+    bool yaw_set             = false;
+    bool use_open_track      = false;
+    int32_t open_track_port  = 4242;
+    bool use_track_filter    = false;
+    float trk_flt_rot_sens   = 0.5f;
+    float trk_flt_pos_sens   = 0.25f;
+    float trk_flt_rot_dz     = 0.03f;
+    float trk_flt_pos_dz     = 0.02f;
+    float trk_flt_zoom_smooth = 0.0f;
+    float trk_flt_max_zoom   = 10.0f;
     std::string launch_script;
-    int32_t pose_reset_key;
-    std::string pose_reset_str;
-    bool reset_xinput;
-    bool pose_reset;
-    int32_t ctrl_toggle_key;
-    std::string ctrl_toggle_str;
-    bool ctrl_xinput;
-    int32_t ctrl_type;
-    std::string ctrl_type_str;
-    bool ctrl_held;
-    float pitch_radius;
-    float ctrl_deadzone;
-    float ctrl_sensitivity;
+    int32_t pose_reset_key   = 0;
+    std::string pose_reset_str = "VK_NUMPAD7";
+    bool reset_xinput        = false;
+    bool pose_reset          = false;
+    int32_t ctrl_toggle_key  = 0;
+    std::string ctrl_toggle_str = "VK_NUMPAD8";
+    bool ctrl_xinput         = false;
+    int32_t ctrl_type        = 0;
+    std::string ctrl_type_str = "toggle";
+    bool ctrl_held           = false;
+    float pitch_radius       = 0.0f;
+    float ctrl_deadzone      = 0.05f;
+    float ctrl_sensitivity   = 1.0f;
 
-    size_t num_user_settings;
+    size_t num_user_settings = 0;
     std::vector<int32_t> user_load_key;
     std::vector<std::string> user_load_str;
     std::vector<int32_t> user_store_key;
