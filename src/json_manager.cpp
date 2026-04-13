@@ -287,8 +287,12 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         config.ctrl_deadzone = getValue<float>(jsonConfig, "ctrl_deadzone");
         config.ctrl_sensitivity = getValue<float>(jsonConfig, "ctrl_sensitivity");
 
-        // Read user binds from user_settings array
-        const auto& user_settings_array = jsonConfig.at("user_settings");
+        // Read user binds from user_settings array, falling back to defaults if missing or empty
+        nlohmann::json user_settings_array;
+        if (jsonConfig.contains("user_settings") && jsonConfig.at("user_settings").size() > 0)
+            user_settings_array = jsonConfig.at("user_settings");
+        else
+            user_settings_array = default_config_.at("user_settings");
 
         // Resize vectors based on the size of the user_settings array
         config.num_user_settings = user_settings_array.size();
@@ -380,18 +384,21 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
     jsonConfig["ctrl_deadzone"] = config.ctrl_deadzone;
     jsonConfig["ctrl_sensitivity"] = config.ctrl_sensitivity;
 
-    // Store user settings as an array
-    for (int i = 0; i < config.num_user_settings; i++) {
-        nlohmann::ordered_json userSettings;
-        userSettings["user_load_key"] = config.user_load_str[i];
-        userSettings["user_store_key"] = config.user_store_str[i];
-        userSettings["user_key_type"] = config.user_type_str[i];
-        userSettings["user_depth"] = config.user_depth[i];
-        userSettings["user_convergence"] = config.user_convergence[i];
-        userSettings["user_fov"] = config.user_fov[i];
-
-        // Append to JSON array in the main config
-        jsonConfig["user_settings"].push_back(userSettings);
+    // Store user settings as an array, falling back to defaults if none are set
+    if (config.num_user_settings > 0) {
+        for (size_t i = 0; i < config.num_user_settings; i++) {
+            nlohmann::ordered_json userSettings;
+            userSettings["user_load_key"]   = config.user_load_str[i];
+            userSettings["user_store_key"]  = config.user_store_str[i];
+            userSettings["user_key_type"]   = config.user_type_str[i];
+            userSettings["user_depth"]      = config.user_depth[i];
+            userSettings["user_convergence"]= config.user_convergence[i];
+            userSettings["user_fov"]        = config.user_fov[i];
+            jsonConfig["user_settings"].push_back(userSettings);
+        }
+    }
+    else {
+        jsonConfig["user_settings"] = default_config_.at("user_settings");
     }
 
     writeJsonToFile(filename, jsonConfig);
