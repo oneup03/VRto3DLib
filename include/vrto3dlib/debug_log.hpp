@@ -27,6 +27,13 @@ class DebugLog {
 public:
     DebugLog() = default;
 
+    // Change the log filename stem (e.g. "myplugin" -> myplugin.txt / myplugin_previous.txt).
+    // Safe to call at any time; takes effect on the next LOG() call.
+    static void SetLogName(const std::string& stem) {
+        ConfiguredStem() = stem;
+        GetFileState(true); // re-initialize with new name
+    }
+
     ~DebugLog() {
         flush();
     }
@@ -103,6 +110,11 @@ private:
         return utf8;
     }
 
+    static std::string& ConfiguredStem() {
+        static std::string stem = "vrto3d";
+        return stem;
+    }
+
     static FileState InitializeFileState() {
         FileInitScope init_scope;
         FileState state;
@@ -118,8 +130,9 @@ private:
             return state;
         }
 
-        const std::string current_log_path = logs_dir + "\\vrto3d.txt";
-        const std::string previous_log_path = logs_dir + "\\vrto3d_previous.txt";
+        const std::string& stem = ConfiguredStem();
+        const std::string current_log_path  = logs_dir + "\\" + stem + ".txt";
+        const std::string previous_log_path = logs_dir + "\\" + stem + "_previous.txt";
 
         DeleteFileA(previous_log_path.c_str());
         MoveFileExA(current_log_path.c_str(), previous_log_path.c_str(), MOVEFILE_REPLACE_EXISTING);
@@ -134,8 +147,13 @@ private:
         return state;
     }
 
-    static const FileState& GetFileState() {
-        static const FileState state = InitializeFileState();
+    static FileState& GetFileState(bool reset = false) {
+        static FileState state;
+        static bool initialized = false;
+        if (reset || !initialized) {
+            state = InitializeFileState();
+            initialized = true;
+        }
         return state;
     }
 
