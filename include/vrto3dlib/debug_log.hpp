@@ -134,10 +134,25 @@ private:
         const std::string current_log_path  = logs_dir + "\\" + stem + ".txt";
         const std::string previous_log_path = logs_dir + "\\" + stem + "_previous.txt";
 
-        DeleteFileA(previous_log_path.c_str());
-        MoveFileExA(current_log_path.c_str(), previous_log_path.c_str(), MOVEFILE_REPLACE_EXISTING);
+        // Use a named mutex scoped to this process + stem to coordinate across DLLs
+        // loaded in the same process. The first DLL to create it does the rotation
+        // and truncates the file; subsequent DLLs just append to the existing file.
+        const std::string mutex_name = "Local\\DebugLog_" + stem + "_" + std::to_string(GetCurrentProcessId());
+        HANDLE h = CreateMutexA(nullptr, FALSE, mutex_name.c_str());
+        const bool first_in_process = (h != nullptr && GetLastError() != ERROR_ALREADY_EXISTS);
 
-        std::ofstream new_log(current_log_path, std::ios::out | std::ios::trunc | std::ios::binary);
+        if (first_in_process) {
+            DeleteFileA(previous_log_path.c_str());
+            MoveFileExA(current_log_path.c_str(), previous_log_path.c_str(), MOVEFILE_REPLACE_EXISTING);
+        }
+        // Intentionally leak the mutex handle — it lives for the process lifetime,
+        // which is what keeps ERROR_ALREADY_EXISTS working for later DLL loads.
+
+        const auto open_mode = first_in_process
+            ? (std::ios::out | std::ios::trunc  | std::ios::binary)
+            : (std::ios::out | std::ios::app    | std::ios::binary);
+
+        std::ofstream new_log(current_log_path, open_mode);
         if (!new_log.is_open()) {
             return state;
         }
