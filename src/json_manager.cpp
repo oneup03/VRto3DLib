@@ -32,6 +32,43 @@
 // Include the nlohmann/json library
 #include <nlohmann/json.hpp>
 
+
+//-----------------------------------------------------------------------------
+// OutputMode string helpers (declared in stereo_config.h)
+//-----------------------------------------------------------------------------
+OutputMode OutputModeFromString(const std::string& s, OutputMode fallback)
+{
+    if (s == "SbS")                  return OutputMode::SbS;
+    if (s == "SbSLeftFlip")          return OutputMode::SbSLeftFlip;
+    if (s == "TaB")                  return OutputMode::TaB;
+    if (s == "RowInterlaced")        return OutputMode::RowInterlaced;
+    if (s == "ColInterlaced")        return OutputMode::ColInterlaced;
+    if (s == "Checkerboard")         return OutputMode::Checkerboard;
+    if (s == "AnaglyphRedCyan")      return OutputMode::AnaglyphRedCyan;
+    if (s == "AnaglyphGreenMagenta") return OutputMode::AnaglyphGreenMagenta;
+    if (s == "LeiaSrWeaver")         return OutputMode::LeiaSrWeaver;
+    if (s == "3DVisionDX9")          return OutputMode::NvStereoDX9;
+    return fallback;
+}
+
+std::string OutputModeToString(OutputMode m)
+{
+    switch (m) {
+        case OutputMode::SbS:                  return "SbS";
+        case OutputMode::SbSLeftFlip:          return "SbSLeftFlip";
+        case OutputMode::TaB:                  return "TaB";
+        case OutputMode::RowInterlaced:        return "RowInterlaced";
+        case OutputMode::ColInterlaced:        return "ColInterlaced";
+        case OutputMode::Checkerboard:         return "Checkerboard";
+        case OutputMode::AnaglyphRedCyan:      return "AnaglyphRedCyan";
+        case OutputMode::AnaglyphGreenMagenta: return "AnaglyphGreenMagenta";
+        case OutputMode::LeiaSrWeaver:         return "LeiaSrWeaver";
+        case OutputMode::NvStereoDX9:          return "3DVisionDX9";
+    }
+    return "SbS";
+}
+
+
 JsonManager::JsonManager() {
     vrto3dFolder = GetSteamInstallPath();
     if (vrto3dFolder != "")
@@ -189,10 +226,10 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
 
         config.async_enable = getValue<bool>(jsonConfig, "async_enable");
         config.disable_hotkeys = getValue<bool>(jsonConfig, "disable_hotkeys");
-        config.tab_enable = getValue<bool>(jsonConfig, "tab_enable");
+        config.output_mode = OutputModeFromString(getValue<std::string>(jsonConfig, "output_mode"));
         config.vd_fsbs_hack = getValue<bool>(jsonConfig, "vd_fsbs_hack");
         config.framepack_offset = getValue<int>(jsonConfig, "framepack_offset");
-        config.reverse_enable = getValue<bool>(jsonConfig, "reverse_enable");
+        config.eye_swap = getValue<bool>(jsonConfig, "eye_swap");
         config.dash_enable = getValue<bool>(jsonConfig, "dash_enable");
         config.auto_focus = getValue<bool>(jsonConfig, "auto_focus");
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");
@@ -206,8 +243,8 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.trk_flt_max_zoom = getValue<float>(jsonConfig, "trk_flt_max_zoom");
         config.launch_script = getValue<std::string>(jsonConfig, "launch_script");
 
-        config.display_latency = getValue<float>(jsonConfig, "display_latency");
-        config.display_frequency = getValue<float>(jsonConfig, "display_frequency");
+        // display_latency / display_frequency are computed at driver activation
+        // from the target monitor; see MockControllerDeviceDriver::Activate.
         config.sleep_count_max = (int)(floor(1600.0 / (1000.0 / config.display_frequency)));
     }
     catch (const nlohmann::json::exception& e) {

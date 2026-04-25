@@ -20,6 +20,25 @@
 #include <vector>
 
 
+// Output format selected for the built-in DX11 presenter (or alternate presenter).
+// Compositor always renders canonical 2W x H SbS upstream; the presenter repacks.
+enum class OutputMode : int {
+    SbS = 0,               // 2W x H native side-by-side (or 2W x 2H with vd_fsbs_hack)
+    SbSLeftFlip,           // SbS, but the left half is flipped vertically
+    TaB,                   // W  x 2H top/bottom; framepack_offset inserts a gap
+    RowInterlaced,         // W  x H, alternating rows (passive 3D TVs)
+    ColInterlaced,         // W  x H, alternating columns
+    Checkerboard,          // W  x H, (x+y)%2 eye selection
+    AnaglyphRedCyan,
+    AnaglyphGreenMagenta,
+    LeiaSrWeaver,          // alternate: hand SRV to SR::IDX11Weaver1
+    NvStereoDX9,           // alternate: 3D Vision via NVAPI + D3D9Ex (JSON value: "3DVisionDX9")
+};
+
+OutputMode OutputModeFromString(const std::string& s, OutputMode fallback = OutputMode::SbS);
+std::string OutputModeToString(OutputMode m);
+
+
 // Configuration for VRto3D
 // Default values mirror default_config_ in json_manager.h — keep in sync.
 struct StereoDisplayDriverConfiguration
@@ -48,13 +67,15 @@ struct StereoDisplayDriverConfiguration
     bool async_enable        = false;
     bool disable_hotkeys     = false;
 
-    bool tab_enable          = false;
+    OutputMode output_mode   = OutputMode::SbS;
     int32_t framepack_offset = 0;
-    bool reverse_enable      = false;
+    bool eye_swap            = false;
     bool vd_fsbs_hack        = false;
     bool dash_enable         = false;
     bool auto_focus          = true;
 
+    // Computed at driver activation from the target monitor (display_index).
+    // Not read from JSON.
     float display_latency    = 0.011f;
     float display_frequency  = 60.0f;
     int32_t sleep_count_max  = 0;
