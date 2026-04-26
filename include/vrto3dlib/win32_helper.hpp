@@ -451,31 +451,9 @@ inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration
             << selected.x << "," << selected.y << " " << selected.width << "x" << selected.height << ")";
     }
 
-    if (config.multi_display) {
-        const int32_t contiguous_right_x = selected.x + static_cast<int32_t>(selected.width);
-        const auto right_monitor_it = std::find_if(monitors.begin(), monitors.end(), [&](const MonitorBounds& monitor) {
-            return monitor.x == contiguous_right_x
-                && monitor.y == selected.y
-                && monitor.width == selected.width
-                && monitor.height == selected.height;
-            });
-
-        if (right_monitor_it != monitors.end()) {
-            const MonitorBounds& right_monitor = *right_monitor_it;
-            config.window_width = static_cast<int32_t>(selected.width + right_monitor.width);
-
-            LOG()
-                << "multi_display=true. Found contiguous right display order " << right_monitor.display_index
-                << " (" << right_monitor.device_name.c_str() << ") with matching bounds; using two-display span ("
-                << config.window_x << "," << config.window_y << " " << config.window_width << "x" << config.window_height << ")";
-        }
-        else {
-            LOG()
-                << "multi_display=true but no contiguous right display matched required bounds (same width/height, same top Y, exact right adjacency)."
-                << " Keeping single-display bounds ("
-                << config.window_x << "," << config.window_y << " " << config.window_width << "x" << config.window_height << ")";
-        }
-    }
+    // multi_display logic moved to vrto3d/src/platform/platform.h
+    // (ResolveTargetMonitors). The presenter chooses to span monitors based on
+    // OutputMode (DualDisplay / DualDisplayFlip), not a separate config flag.
 
     return true;
 }

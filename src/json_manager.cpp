@@ -38,32 +38,44 @@
 //-----------------------------------------------------------------------------
 OutputMode OutputModeFromString(const std::string& s, OutputMode fallback)
 {
-    if (s == "SbS")                  return OutputMode::SbS;
-    if (s == "SbSLeftFlip")          return OutputMode::SbSLeftFlip;
-    if (s == "TaB")                  return OutputMode::TaB;
-    if (s == "RowInterlaced")        return OutputMode::RowInterlaced;
-    if (s == "ColInterlaced")        return OutputMode::ColInterlaced;
-    if (s == "Checkerboard")         return OutputMode::Checkerboard;
-    if (s == "AnaglyphRedCyan")      return OutputMode::AnaglyphRedCyan;
-    if (s == "AnaglyphGreenMagenta") return OutputMode::AnaglyphGreenMagenta;
-    if (s == "LeiaSrWeaver")         return OutputMode::LeiaSrWeaver;
-    if (s == "3DVisionDX9")          return OutputMode::NvStereoDX9;
+    if (s == "SbS")                            return OutputMode::SbS;
+    if (s == "DualDisplay")                    return OutputMode::DualDisplay;
+    if (s == "DualDisplayFlip")                return OutputMode::DualDisplayFlip;
+    if (s == "TaB")                            return OutputMode::TaB;
+    if (s == "RowInterlaced")                  return OutputMode::RowInterlaced;
+    if (s == "ColInterlaced")                  return OutputMode::ColInterlaced;
+    if (s == "Checkerboard")                   return OutputMode::Checkerboard;
+    if (s == "AnaglyphRedCyan")                return OutputMode::AnaglyphRedCyan;
+    if (s == "AnaglyphRedCyanDubois")          return OutputMode::AnaglyphRedCyanDubois;
+    if (s == "AnaglyphRedCyanDeghosted")       return OutputMode::AnaglyphRedCyanDeghosted;
+    if (s == "AnaglyphGreenMagenta")           return OutputMode::AnaglyphGreenMagenta;
+    if (s == "AnaglyphGreenMagentaDubois")     return OutputMode::AnaglyphGreenMagentaDubois;
+    if (s == "AnaglyphGreenMagentaDeghosted")  return OutputMode::AnaglyphGreenMagentaDeghosted;
+    if (s == "AnaglyphBlueAmber")              return OutputMode::AnaglyphBlueAmber;
+    if (s == "LeiaSR")                         return OutputMode::LeiaSR;
+    if (s == "NvidiaDX9")                      return OutputMode::NvidiaDX9;
     return fallback;
 }
 
 std::string OutputModeToString(OutputMode m)
 {
     switch (m) {
-        case OutputMode::SbS:                  return "SbS";
-        case OutputMode::SbSLeftFlip:          return "SbSLeftFlip";
-        case OutputMode::TaB:                  return "TaB";
-        case OutputMode::RowInterlaced:        return "RowInterlaced";
-        case OutputMode::ColInterlaced:        return "ColInterlaced";
-        case OutputMode::Checkerboard:         return "Checkerboard";
-        case OutputMode::AnaglyphRedCyan:      return "AnaglyphRedCyan";
-        case OutputMode::AnaglyphGreenMagenta: return "AnaglyphGreenMagenta";
-        case OutputMode::LeiaSrWeaver:         return "LeiaSrWeaver";
-        case OutputMode::NvStereoDX9:          return "3DVisionDX9";
+        case OutputMode::SbS:                            return "SbS";
+        case OutputMode::DualDisplay:                    return "DualDisplay";
+        case OutputMode::DualDisplayFlip:                return "DualDisplayFlip";
+        case OutputMode::TaB:                            return "TaB";
+        case OutputMode::RowInterlaced:                  return "RowInterlaced";
+        case OutputMode::ColInterlaced:                  return "ColInterlaced";
+        case OutputMode::Checkerboard:                   return "Checkerboard";
+        case OutputMode::AnaglyphRedCyan:                return "AnaglyphRedCyan";
+        case OutputMode::AnaglyphRedCyanDubois:          return "AnaglyphRedCyanDubois";
+        case OutputMode::AnaglyphRedCyanDeghosted:       return "AnaglyphRedCyanDeghosted";
+        case OutputMode::AnaglyphGreenMagenta:           return "AnaglyphGreenMagenta";
+        case OutputMode::AnaglyphGreenMagentaDubois:     return "AnaglyphGreenMagentaDubois";
+        case OutputMode::AnaglyphGreenMagentaDeghosted:  return "AnaglyphGreenMagentaDeghosted";
+        case OutputMode::AnaglyphBlueAmber:              return "AnaglyphBlueAmber";
+        case OutputMode::LeiaSR:                         return "LeiaSR";
+        case OutputMode::NvidiaDX9:                      return "NvidiaDX9";
     }
     return "SbS";
 }
@@ -216,7 +228,6 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
 
         // Load values directly from the base level of the JSON
         config.display_index = getValue<int>(jsonConfig, "display_index");
-        config.multi_display = getValue<bool>(jsonConfig, "multi_display");
         config.render_width = getValue<int>(jsonConfig, "render_width");
         config.render_height = getValue<int>(jsonConfig, "render_height");
         

@@ -23,16 +23,22 @@
 // Output format selected for the built-in DX11 presenter (or alternate presenter).
 // Compositor always renders canonical 2W x H SbS upstream; the presenter repacks.
 enum class OutputMode : int {
-    SbS = 0,               // 2W x H native side-by-side (or 2W x 2H with vd_fsbs_hack)
-    SbSLeftFlip,           // SbS, but the left half is flipped vertically
-    TaB,                   // W  x 2H top/bottom; framepack_offset inserts a gap
-    RowInterlaced,         // W  x H, alternating rows (passive 3D TVs)
-    ColInterlaced,         // W  x H, alternating columns
-    Checkerboard,          // W  x H, (x+y)%2 eye selection
-    AnaglyphRedCyan,
-    AnaglyphGreenMagenta,
-    LeiaSrWeaver,          // alternate: hand SRV to SR::IDX11Weaver1
-    NvStereoDX9,           // alternate: 3D Vision via NVAPI + D3D9Ex (JSON value: "3DVisionDX9")
+    SbS = 0,                       // 2W x H native side-by-side (or 2W x 2H with vd_fsbs_hack)
+    DualDisplay,                   // SbS spanning two contiguous identical monitors (left=mon1, right=mon2)
+    DualDisplayFlip,               // DualDisplay, but the left image is flipped vertically
+    TaB,                           // W  x 2H top/bottom; framepack_offset inserts a gap
+    RowInterlaced,                 // W  x H, alternating rows (passive 3D TVs)
+    ColInterlaced,                 // W  x H, alternating columns
+    Checkerboard,                  // W  x H, (x+y)%2 eye selection
+    AnaglyphRedCyan,               // simple R | GB split
+    AnaglyphRedCyanDubois,         // Dubois optimized R/C
+    AnaglyphRedCyanDeghosted,      // Deghosted R/C (iaian7 / vectorform)
+    AnaglyphGreenMagenta,          // simple G | RB split
+    AnaglyphGreenMagentaDubois,    // Dubois optimized G/M
+    AnaglyphGreenMagentaDeghosted, // Deghosted G/M
+    AnaglyphBlueAmber,             // ColorCode-style B/A
+    LeiaSR,                        // alternate: hand SRV to SR::IDX11Weaver1
+    NvidiaDX9,                     // alternate: 3D Vision via NVAPI + D3D9Ex
 };
 
 OutputMode OutputModeFromString(const std::string& s, OutputMode fallback = OutputMode::SbS);
@@ -44,7 +50,6 @@ std::string OutputModeToString(OutputMode m);
 struct StereoDisplayDriverConfiguration
 {
     int32_t display_index    = 0;
-    bool multi_display       = false;
 
     int32_t window_x         = 0;
     int32_t window_y         = 0;
