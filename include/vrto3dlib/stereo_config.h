@@ -23,13 +23,16 @@
 // Output format selected for the built-in DX11 presenter (or alternate presenter).
 // Compositor always renders canonical 2W x H SbS upstream; the presenter repacks.
 enum class OutputMode : int {
-    SbS = 0,                       // 2W x H native side-by-side (or 2W x 2H with vd_fsbs_hack)
-    DualDisplay,                   // SbS spanning two contiguous identical monitors (left=mon1, right=mon2)
-    DualDisplayFlip,               // DualDisplay, but the left image is flipped vertically
-    TaB,                           // W  x 2H top/bottom; framepack_offset inserts a gap
+    SbS = 0,                       // 2W x H native side-by-side
+    TaB,                           // W  x 2H top/bottom
     RowInterlaced,                 // W  x H, alternating rows (passive 3D TVs)
     ColInterlaced,                 // W  x H, alternating columns
     Checkerboard,                  // W  x H, (x+y)%2 eye selection
+    LeiaSR,                        // alternate: hand SRV to SR::IDX11Weaver1
+    NvidiaDX9,                     // alternate: 3D Vision via NVAPI + D3D9Ex
+    VirtualDesktop,                // Full-SbS 2W x H in a 2W x 2H window with black bars
+    DualDisplay,                   // SbS spanning two contiguous identical monitors (left=mon1, right=mon2)
+    DualDisplayFlip,               // DualDisplay, but the left image is flipped vertically
     AnaglyphRedCyan,               // simple R | GB split
     AnaglyphRedCyanDubois,         // Dubois optimized R/C
     AnaglyphRedCyanDeghosted,      // Deghosted R/C (iaian7 / vectorform)
@@ -37,8 +40,6 @@ enum class OutputMode : int {
     AnaglyphGreenMagentaDubois,    // Dubois optimized G/M
     AnaglyphGreenMagentaDeghosted, // Deghosted G/M
     AnaglyphBlueAmber,             // ColorCode-style B/A
-    LeiaSR,                        // alternate: hand SRV to SR::IDX11Weaver1
-    NvidiaDX9,                     // alternate: 3D Vision via NVAPI + D3D9Ex
 };
 
 OutputMode OutputModeFromString(const std::string& s, OutputMode fallback = OutputMode::SbS);
@@ -50,6 +51,8 @@ std::string OutputModeToString(OutputMode m);
 struct StereoDisplayDriverConfiguration
 {
     int32_t display_index    = 0;
+    OutputMode output_mode   = OutputMode::SbS;
+    bool eye_swap            = false;
 
     int32_t window_x         = 0;
     int32_t window_y         = 0;
@@ -72,9 +75,8 @@ struct StereoDisplayDriverConfiguration
     bool async_enable        = false;
     bool disable_hotkeys     = false;
 
-    OutputMode output_mode   = OutputMode::SbS;
+    
     int32_t framepack_offset = 0;
-    bool eye_swap            = false;
     bool vd_fsbs_hack        = false;
     bool dash_enable         = false;
     bool auto_focus          = true;

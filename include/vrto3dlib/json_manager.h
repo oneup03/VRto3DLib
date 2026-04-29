@@ -39,6 +39,8 @@ private:
     // Create the example default JSON
     nlohmann::ordered_json default_config_ = {
         {"display_index", 0},
+        {"output_mode", "SbS"},
+        {"eye_swap", false},
         {"render_width", 1920},
         {"render_height", 1080},
         {"hmd_height", 1.0},
@@ -51,9 +53,7 @@ private:
         {"convergence", 1.0},
         {"async_enable", false},
         {"disable_hotkeys", false},
-        {"output_mode", "SbS"},
         {"framepack_offset", 0},
-        {"eye_swap", false},
         {"vd_fsbs_hack", false},
         {"dash_enable", false},
         {"auto_focus", true},

@@ -39,12 +39,14 @@
 OutputMode OutputModeFromString(const std::string& s, OutputMode fallback)
 {
     if (s == "SbS")                            return OutputMode::SbS;
-    if (s == "DualDisplay")                    return OutputMode::DualDisplay;
-    if (s == "DualDisplayFlip")                return OutputMode::DualDisplayFlip;
     if (s == "TaB")                            return OutputMode::TaB;
     if (s == "RowInterlaced")                  return OutputMode::RowInterlaced;
     if (s == "ColInterlaced")                  return OutputMode::ColInterlaced;
     if (s == "Checkerboard")                   return OutputMode::Checkerboard;
+    if (s == "LeiaSR")                         return OutputMode::LeiaSR;
+    if (s == "NvidiaDX9")                      return OutputMode::NvidiaDX9;
+    if (s == "DualDisplay")                    return OutputMode::DualDisplay;
+    if (s == "DualDisplayFlip")                return OutputMode::DualDisplayFlip;
     if (s == "AnaglyphRedCyan")                return OutputMode::AnaglyphRedCyan;
     if (s == "AnaglyphRedCyanDubois")          return OutputMode::AnaglyphRedCyanDubois;
     if (s == "AnaglyphRedCyanDeghosted")       return OutputMode::AnaglyphRedCyanDeghosted;
@@ -52,8 +54,6 @@ OutputMode OutputModeFromString(const std::string& s, OutputMode fallback)
     if (s == "AnaglyphGreenMagentaDubois")     return OutputMode::AnaglyphGreenMagentaDubois;
     if (s == "AnaglyphGreenMagentaDeghosted")  return OutputMode::AnaglyphGreenMagentaDeghosted;
     if (s == "AnaglyphBlueAmber")              return OutputMode::AnaglyphBlueAmber;
-    if (s == "LeiaSR")                         return OutputMode::LeiaSR;
-    if (s == "NvidiaDX9")                      return OutputMode::NvidiaDX9;
     return fallback;
 }
 
@@ -61,12 +61,14 @@ std::string OutputModeToString(OutputMode m)
 {
     switch (m) {
         case OutputMode::SbS:                            return "SbS";
-        case OutputMode::DualDisplay:                    return "DualDisplay";
-        case OutputMode::DualDisplayFlip:                return "DualDisplayFlip";
         case OutputMode::TaB:                            return "TaB";
         case OutputMode::RowInterlaced:                  return "RowInterlaced";
         case OutputMode::ColInterlaced:                  return "ColInterlaced";
         case OutputMode::Checkerboard:                   return "Checkerboard";
+        case OutputMode::LeiaSR:                         return "LeiaSR";
+        case OutputMode::NvidiaDX9:                      return "NvidiaDX9";
+        case OutputMode::DualDisplay:                    return "DualDisplay";
+        case OutputMode::DualDisplayFlip:                return "DualDisplayFlip";
         case OutputMode::AnaglyphRedCyan:                return "AnaglyphRedCyan";
         case OutputMode::AnaglyphRedCyanDubois:          return "AnaglyphRedCyanDubois";
         case OutputMode::AnaglyphRedCyanDeghosted:       return "AnaglyphRedCyanDeghosted";
@@ -74,8 +76,6 @@ std::string OutputModeToString(OutputMode m)
         case OutputMode::AnaglyphGreenMagentaDubois:     return "AnaglyphGreenMagentaDubois";
         case OutputMode::AnaglyphGreenMagentaDeghosted:  return "AnaglyphGreenMagentaDeghosted";
         case OutputMode::AnaglyphBlueAmber:              return "AnaglyphBlueAmber";
-        case OutputMode::LeiaSR:                         return "LeiaSR";
-        case OutputMode::NvidiaDX9:                      return "NvidiaDX9";
     }
     return "SbS";
 }
@@ -228,6 +228,8 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
 
         // Load values directly from the base level of the JSON
         config.display_index = getValue<int>(jsonConfig, "display_index");
+        config.output_mode = OutputModeFromString(getValue<std::string>(jsonConfig, "output_mode"));
+        config.eye_swap = getValue<bool>(jsonConfig, "eye_swap");
         config.render_width = getValue<int>(jsonConfig, "render_width");
         config.render_height = getValue<int>(jsonConfig, "render_height");
         
@@ -237,10 +239,8 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
 
         config.async_enable = getValue<bool>(jsonConfig, "async_enable");
         config.disable_hotkeys = getValue<bool>(jsonConfig, "disable_hotkeys");
-        config.output_mode = OutputModeFromString(getValue<std::string>(jsonConfig, "output_mode"));
         config.vd_fsbs_hack = getValue<bool>(jsonConfig, "vd_fsbs_hack");
         config.framepack_offset = getValue<int>(jsonConfig, "framepack_offset");
-        config.eye_swap = getValue<bool>(jsonConfig, "eye_swap");
         config.dash_enable = getValue<bool>(jsonConfig, "dash_enable");
         config.auto_focus = getValue<bool>(jsonConfig, "auto_focus");
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");
