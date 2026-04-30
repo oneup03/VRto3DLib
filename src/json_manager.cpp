@@ -45,11 +45,17 @@ OutputMode OutputModeFromString(const std::string& s, OutputMode fallback)
     if (s == "Checkerboard")                   return OutputMode::Checkerboard;
     if (s == "LeiaSR")                         return OutputMode::LeiaSR;
     if (s == "NvidiaDX9")                      return OutputMode::NvidiaDX9;
+    if (s == "VirtualDesktop")                 return OutputMode::VirtualDesktop;
+    if (s == "FramePacked720p60")              return OutputMode::FramePacked720p60;
+    if (s == "FramePacked1080p24")             return OutputMode::FramePacked1080p24;
+    if (s == "FramePacked1080p60")             return OutputMode::FramePacked1080p60;
+    if (s == "FramePacked1080p60CVT")          return OutputMode::FramePacked1080p60CVT;
     if (s == "DualDisplay")                    return OutputMode::DualDisplay;
     if (s == "DualDisplayFlip")                return OutputMode::DualDisplayFlip;
     if (s == "AnaglyphRedCyan")                return OutputMode::AnaglyphRedCyan;
     if (s == "AnaglyphRedCyanDubois")          return OutputMode::AnaglyphRedCyanDubois;
     if (s == "AnaglyphRedCyanDeghosted")       return OutputMode::AnaglyphRedCyanDeghosted;
+    if (s == "AnaglyphRedCyanCompromise")      return OutputMode::AnaglyphRedCyanCompromise;
     if (s == "AnaglyphGreenMagenta")           return OutputMode::AnaglyphGreenMagenta;
     if (s == "AnaglyphGreenMagentaDubois")     return OutputMode::AnaglyphGreenMagentaDubois;
     if (s == "AnaglyphGreenMagentaDeghosted")  return OutputMode::AnaglyphGreenMagentaDeghosted;
@@ -67,17 +73,64 @@ std::string OutputModeToString(OutputMode m)
         case OutputMode::Checkerboard:                   return "Checkerboard";
         case OutputMode::LeiaSR:                         return "LeiaSR";
         case OutputMode::NvidiaDX9:                      return "NvidiaDX9";
+        case OutputMode::VirtualDesktop:                 return "VirtualDesktop";
+        case OutputMode::FramePacked720p60:              return "FramePacked720p60";
+        case OutputMode::FramePacked1080p24:             return "FramePacked1080p24";
+        case OutputMode::FramePacked1080p60:             return "FramePacked1080p60";
+        case OutputMode::FramePacked1080p60CVT:          return "FramePacked1080p60CVT";
         case OutputMode::DualDisplay:                    return "DualDisplay";
         case OutputMode::DualDisplayFlip:                return "DualDisplayFlip";
         case OutputMode::AnaglyphRedCyan:                return "AnaglyphRedCyan";
         case OutputMode::AnaglyphRedCyanDubois:          return "AnaglyphRedCyanDubois";
         case OutputMode::AnaglyphRedCyanDeghosted:       return "AnaglyphRedCyanDeghosted";
+        case OutputMode::AnaglyphRedCyanCompromise:      return "AnaglyphRedCyanCompromise";
         case OutputMode::AnaglyphGreenMagenta:           return "AnaglyphGreenMagenta";
         case OutputMode::AnaglyphGreenMagentaDubois:     return "AnaglyphGreenMagentaDubois";
         case OutputMode::AnaglyphGreenMagentaDeghosted:  return "AnaglyphGreenMagentaDeghosted";
         case OutputMode::AnaglyphBlueAmber:              return "AnaglyphBlueAmber";
     }
     return "SbS";
+}
+
+
+//-----------------------------------------------------------------------------
+// HDMI 1.4 frame-packing timing specs (declared in stereo_config.h)
+//-----------------------------------------------------------------------------
+static const FramePackTimingSpec s_frame_pack_timings[] = {
+    // FramePacked720p60:  1280x1470 @60Hz, 30px gap
+    //   H: 1650 total = 1280 active + 110 front + 40 sync + 220 back
+    //   V: 1500 total = 1470 active +   5 front +  5 sync +  20 back
+    //   Pixel clock: 1650 * 1500 * 60 = 148.5 MHz (HDMI 1.4 standard)
+    { 1280, 1470, 720, 30, 60.0f,   1650, 110, 40, 220,   1500, 5, 5, 20 },
+
+    // FramePacked1080p24: 1920x2205 @24Hz, 45px gap
+    //   H: 2750 total = 1920 active + 638 front + 44 sync + 148 back
+    //   V: 2250 total = 2205 active +   4 front +  5 sync +  36 back
+    //   Pixel clock: 2750 * 2250 * 24 = 148.5 MHz (HDMI 1.4 standard)
+    { 1920, 2205, 1080, 45, 24.0f,  2750, 638, 44, 148,   2250, 4, 5, 36 },
+
+    // FramePacked1080p60: 1920x2205 @60Hz, 45px gap
+    //   H: 2750 total = 1920 active + 638 front + 44 sync + 148 back
+    //   V: 2250 total = 2205 active +   4 front +  5 sync +  36 back
+    //   Pixel clock: 2750 * 2250 * 60 = 371.25 MHz (requires HDMI 2.0+)
+    { 1920, 2205, 1080, 45, 60.0f,  2750, 638, 44, 148,   2250, 4, 5, 36 },
+
+    // FramePacked1080p60CVT: 1920x2205 @60Hz CVT blanking, 45px gap
+    //   H: 2080 total = 1920 active + 48 front + 32 sync + 80 back
+    //   V: 2250 total = 2205 active +  4 front +  5 sync + 36 back
+    //   Pixel clock: 2080 * 2250 * 60 = 280.8 MHz (fits most HDMI 2.0 displays)
+    { 1920, 2205, 1080, 45, 60.0f,  2080, 48, 32, 80,     2250, 4, 5, 36 },
+};
+
+const FramePackTimingSpec* GetFramePackTimingSpec(OutputMode m)
+{
+    switch (m) {
+        case OutputMode::FramePacked720p60:     return &s_frame_pack_timings[0];
+        case OutputMode::FramePacked1080p24:    return &s_frame_pack_timings[1];
+        case OutputMode::FramePacked1080p60:    return &s_frame_pack_timings[2];
+        case OutputMode::FramePacked1080p60CVT: return &s_frame_pack_timings[3];
+        default:                                return nullptr;
+    }
 }
 
 
@@ -239,8 +292,6 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
 
         config.async_enable = getValue<bool>(jsonConfig, "async_enable");
         config.disable_hotkeys = getValue<bool>(jsonConfig, "disable_hotkeys");
-        config.vd_fsbs_hack = getValue<bool>(jsonConfig, "vd_fsbs_hack");
-        config.framepack_offset = getValue<int>(jsonConfig, "framepack_offset");
         config.dash_enable = getValue<bool>(jsonConfig, "dash_enable");
         config.auto_focus = getValue<bool>(jsonConfig, "auto_focus");
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");

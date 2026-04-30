@@ -53,8 +53,6 @@ private:
         {"convergence", 1.0},
         {"async_enable", false},
         {"disable_hotkeys", false},
-        {"framepack_offset", 0},
-        {"vd_fsbs_hack", false},
         {"dash_enable", false},
         {"auto_focus", true},
         {"pitch_enable", false},

@@ -16,6 +16,7 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -31,11 +32,16 @@ enum class OutputMode : int {
     LeiaSR,                        // alternate: hand SRV to SR::IDX11Weaver1
     NvidiaDX9,                     // alternate: 3D Vision via NVAPI + D3D9Ex
     VirtualDesktop,                // Full-SbS 2W x H in a 2W x 2H window with black bars
+    FramePacked720p60,             // HDMI 1.4 frame pack: 1280x1470 @60Hz (30px gap)
+    FramePacked1080p24,            // HDMI 1.4 frame pack: 1920x2205 @24Hz (45px gap)
+    FramePacked1080p60,            // HDMI 1.4 frame pack: 1920x2205 @60Hz (45px gap)
+    FramePacked1080p60CVT,         // HDMI 1.4 frame pack: 1920x2205 @60Hz CVT blanking (45px gap)
     DualDisplay,                   // SbS spanning two contiguous identical monitors (left=mon1, right=mon2)
     DualDisplayFlip,               // DualDisplay, but the left image is flipped vertically
     AnaglyphRedCyan,               // simple R | GB split
     AnaglyphRedCyanDubois,         // Dubois optimized R/C
     AnaglyphRedCyanDeghosted,      // Deghosted R/C (iaian7 / vectorform)
+    AnaglyphRedCyanCompromise,     // Compromise R/C (Dubois-derived, single-R-channel left)
     AnaglyphGreenMagenta,          // simple G | RB split
     AnaglyphGreenMagentaDubois,    // Dubois optimized G/M
     AnaglyphGreenMagentaDeghosted, // Deghosted G/M
@@ -44,6 +50,42 @@ enum class OutputMode : int {
 
 OutputMode OutputModeFromString(const std::string& s, OutputMode fallback = OutputMode::SbS);
 std::string OutputModeToString(OutputMode m);
+
+
+// ---------------------------------------------------------------------------
+// HDMI 1.4 frame-packing timing specifications
+// ---------------------------------------------------------------------------
+struct FramePackTimingSpec {
+    uint32_t active_w;       // visible horizontal pixels (e.g. 1920)
+    uint32_t active_h;       // visible vertical pixels, both eyes + gap (e.g. 2205)
+    uint32_t per_eye_h;      // single-eye height (e.g. 1080)
+    uint32_t gap_pixels;     // blanking gap between the two eyes (e.g. 45)
+    float    refresh_hz;     // target refresh rate
+
+    // Horizontal blanking
+    uint16_t h_total;
+    uint16_t h_front_porch;
+    uint16_t h_sync_width;
+    uint16_t h_back_porch;
+
+    // Vertical blanking
+    uint16_t v_total;
+    uint16_t v_front_porch;
+    uint16_t v_sync_width;
+    uint16_t v_back_porch;
+};
+
+// Returns true if the given OutputMode is one of the FramePacked variants.
+inline bool IsFramePackedMode(OutputMode m) {
+    return m == OutputMode::FramePacked720p60
+        || m == OutputMode::FramePacked1080p24
+        || m == OutputMode::FramePacked1080p60
+        || m == OutputMode::FramePacked1080p60CVT;
+}
+
+// Returns the FramePackTimingSpec for a frame-packed mode. Caller must check
+// IsFramePackedMode() first — returns nullptr for non-frame-packed modes.
+const FramePackTimingSpec* GetFramePackTimingSpec(OutputMode m);
 
 
 // Configuration for VRto3D
@@ -75,9 +117,6 @@ struct StereoDisplayDriverConfiguration
     bool async_enable        = false;
     bool disable_hotkeys     = false;
 
-    
-    int32_t framepack_offset = 0;
-    bool vd_fsbs_hack        = false;
     bool dash_enable         = false;
     bool auto_focus          = true;
 
