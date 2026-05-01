@@ -139,6 +139,23 @@ struct StereoDisplayDriverConfiguration
     float trk_flt_pos_dz     = 0.02f;
     float trk_flt_zoom_smooth = 0.0f;
     float trk_flt_max_zoom   = 10.0f;
+
+    // LeiaSR built-in head tracking (LeiaSrPresenter -> One-Euro filter ->
+    // OpenTrack UDP -> open_track_port). Active only when output_mode==LeiaSR
+    // AND use_open_track==true. Defaults mirror Simulated-Reality-OpenTrack-Bridge.
+    float sr_filter_pos_mincutoff = 0.08f;
+    float sr_filter_pos_beta      = 0.08f;
+    float sr_filter_rot_mincutoff = 0.12f;
+    float sr_filter_rot_beta      = 0.01f;
+    float sr_angle_deadzone_deg   = 0.2f;
+    float sr_sens_yaw             = 1.0f;
+    float sr_sens_pitch           = 1.0f;
+    float sr_sens_roll            = 1.0f;
+    float sr_max_yaw              = 70.0f;
+    float sr_max_pitch            = 70.0f;
+    float sr_max_roll             = 70.0f;
+    // One of: "XYZ_YawPitch" (default), "XYZ", "YawPitch", "Full6DOF", "YawPitchRoll"
+    std::string sr_track_mode     = "XYZ_YawPitch";
     std::string launch_script;
     int32_t pose_reset_key   = 0;
     std::string pose_reset_str = "VK_NUMPAD7";

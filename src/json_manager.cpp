@@ -303,6 +303,25 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.trk_flt_pos_dz = getValue<float>(jsonConfig, "trk_flt_pos_dz");
         config.trk_flt_zoom_smooth = getValue<float>(jsonConfig, "trk_flt_zoom_smooth");
         config.trk_flt_max_zoom = getValue<float>(jsonConfig, "trk_flt_max_zoom");
+        config.sr_filter_pos_mincutoff = getValue<float>(jsonConfig, "sr_filter_pos_mincutoff");
+        config.sr_filter_pos_beta      = getValue<float>(jsonConfig, "sr_filter_pos_beta");
+        config.sr_filter_rot_mincutoff = getValue<float>(jsonConfig, "sr_filter_rot_mincutoff");
+        config.sr_filter_rot_beta      = getValue<float>(jsonConfig, "sr_filter_rot_beta");
+        config.sr_angle_deadzone_deg   = getValue<float>(jsonConfig, "sr_angle_deadzone_deg");
+        config.sr_sens_yaw             = getValue<float>(jsonConfig, "sr_sens_yaw");
+        config.sr_sens_pitch           = getValue<float>(jsonConfig, "sr_sens_pitch");
+        config.sr_sens_roll            = getValue<float>(jsonConfig, "sr_sens_roll");
+        config.sr_max_yaw              = getValue<float>(jsonConfig, "sr_max_yaw");
+        config.sr_max_pitch            = getValue<float>(jsonConfig, "sr_max_pitch");
+        config.sr_max_roll             = getValue<float>(jsonConfig, "sr_max_roll");
+        config.sr_track_mode           = getValue<std::string>(jsonConfig, "sr_track_mode");
+
+        // LeiaSR + OpenTrack: force the consumer-side AHRS filter on. The SR
+        // pipeline already smooths upstream, but the receiver expects filtered
+        // input for stable pose composition.
+        if (config.output_mode == OutputMode::LeiaSR && config.use_open_track) {
+            config.use_track_filter = true;
+        }
         config.launch_script = getValue<std::string>(jsonConfig, "launch_script");
 
         // display_latency / display_frequency are computed at driver activation
