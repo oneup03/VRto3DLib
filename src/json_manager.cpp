@@ -318,9 +318,15 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
 
         // LeiaSR + OpenTrack: force the consumer-side AHRS filter on. The SR
         // pipeline already smooths upstream, but the receiver expects filtered
-        // input for stable pose composition.
-        if (config.output_mode == OutputMode::LeiaSR && config.use_open_track) {
+        // input for stable pose composition. Also persist the override to
+        // default_config.json so the on-disk value matches runtime behavior.
+        if (config.output_mode == OutputMode::LeiaSR && config.use_open_track && !config.use_track_filter) {
             config.use_track_filter = true;
+            LOG() << "LoadParamsFromJson: forcing use_track_filter=true (LeiaSR + use_open_track)";
+
+            nlohmann::ordered_json merged = reorderFillJson(jsonConfig);
+            merged["use_track_filter"] = true;
+            writeJsonToFile(DEF_CFG, merged);
         }
         config.launch_script = getValue<std::string>(jsonConfig, "launch_script");
 
