@@ -335,7 +335,8 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.eye_swap = getValue<bool>(jsonConfig, "eye_swap");
         config.render_width = getValue<int>(jsonConfig, "render_width");
         config.render_height = getValue<int>(jsonConfig, "render_height");
-        
+        config.display_frequency = getValue<float>(jsonConfig, "display_frequency");
+
         config.hmd_x = getValue<float>(jsonConfig, "hmd_x");
         config.hmd_y = getValue<float>(jsonConfig, "hmd_y");
         config.hmd_yaw = getValue<float>(jsonConfig, "hmd_yaw");
@@ -422,6 +423,15 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         config.convergence = getValue<float>(jsonConfig, "convergence");
         if (jsonConfig.contains("async_enable")) {
             config.async_enable = getValue<bool>(jsonConfig, "async_enable");
+        }
+        if (jsonConfig.contains("auto_depth_enabled")) {
+            config.auto_depth_enabled = getValue<bool>(jsonConfig, "auto_depth_enabled");
+        }
+        if (jsonConfig.contains("auto_depth_target_disparity")) {
+            config.auto_depth_target_disparity = getValue<float>(jsonConfig, "auto_depth_target_disparity");
+        }
+        if (jsonConfig.contains("auto_depth_smoothing")) {
+            config.auto_depth_smoothing = getValue<float>(jsonConfig, "auto_depth_smoothing");
         }
 
         // Controller settings
@@ -573,6 +583,9 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
     jsonConfig["depth"] = config.depth;
     jsonConfig["convergence"] = config.convergence;
     jsonConfig["async_enable"] = config.async_enable;
+    jsonConfig["auto_depth_enabled"] = config.auto_depth_enabled;
+    jsonConfig["auto_depth_target_disparity"] = config.auto_depth_target_disparity;
+    jsonConfig["auto_depth_smoothing"] = config.auto_depth_smoothing;
     jsonConfig["pitch_enable"] = config.pitch_enable;
     jsonConfig["yaw_enable"] = config.yaw_enable;
     jsonConfig["pose_reset_key"] = config.pose_reset_str;
@@ -626,6 +639,7 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
     j["eye_swap"]        = config.eye_swap;
     j["render_width"]    = config.render_width;
     j["render_height"]   = config.render_height;
+    j["display_frequency"] = config.display_frequency;
 
     // HMD pose
     j["hmd_height"]      = config.hmd_height;
@@ -639,6 +653,9 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
     j["depth"]           = config.depth;
     j["convergence"]     = config.convergence;
     j["async_enable"]    = config.async_enable;
+    j["auto_depth_enabled"]          = config.auto_depth_enabled;
+    j["auto_depth_target_disparity"] = config.auto_depth_target_disparity;
+    j["auto_depth_smoothing"]        = config.auto_depth_smoothing;
 
     // Misc / system
     j["disable_hotkeys"] = config.disable_hotkeys;

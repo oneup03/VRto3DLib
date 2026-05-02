@@ -117,13 +117,24 @@ struct StereoDisplayDriverConfiguration
     bool async_enable        = false;
     bool disable_hotkeys     = false;
 
+    // Auto-depth: GPU disparity analysis on the SbS frame drives a runtime
+    // floor on `depth` so the closest object's on-screen disparity stays under
+    // `auto_depth_target_disparity` (fraction of one eye's width). When toggled
+    // off, depth snaps back to the user's manual ceiling (StereoDisplayComponent
+    // tracks this as `manual_depth_`).
+    bool  auto_depth_enabled         = false;
+    float auto_depth_target_disparity = 0.005f;
+    float auto_depth_smoothing       = 0.08f;
+
     bool dash_enable         = false;
     bool auto_focus          = true;
 
     // Computed at driver activation from the target monitor (display_index).
     // Not read from JSON.
     float display_latency    = 0.011f;
-    float display_frequency  = 60.0f;
+    // 0 = auto-detect from the target monitor at driver activation; any
+    // non-zero value in the JSON config overrides the auto-detection.
+    float display_frequency  = 0.0f;
     int32_t sleep_count_max  = 0;
 
     bool pitch_enable        = false;
