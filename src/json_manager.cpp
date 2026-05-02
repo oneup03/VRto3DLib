@@ -172,20 +172,41 @@ void JsonManager::writeJsonToFile(const std::string& fileName, const nlohmann::o
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Read a JSON from Steam/config/vrto3d
+// Purpose: Read a JSON from Steam/config/vrto3d. Returns an empty json on
+//          missing file, empty file, or parse error — callers must handle the
+//          "no data" case (LoadParamsFromJson regenerates defaults; the
+//          per-profile Load returns false).
 //-----------------------------------------------------------------------------
 nlohmann::json JsonManager::readJsonFromFile(const std::string& fileName) {
     std::string filePath = vrto3dFolder + "\\" + fileName;
     std::ifstream file(filePath);
-    if (file.is_open()) {
-        nlohmann::json jsonData;
-        file >> jsonData;
-        file.close();
-        return jsonData;
-    }
-    else {
+    if (!file.is_open()) {
         return {};
     }
+
+    // Empty-file guard: nlohmann's stream operator throws on EOF before any
+    // token. Detect explicitly so we don't generate a spurious parse error.
+    file.seekg(0, std::ios::end);
+    std::streampos size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    if (size <= 0) {
+        LOG() << "readJsonFromFile: " << fileName << " is empty; ignoring";
+        return {};
+    }
+
+    nlohmann::json jsonData;
+    try {
+        file >> jsonData;
+    } catch (const nlohmann::json::parse_error& e) {
+        LOG() << "readJsonFromFile: " << fileName << " is corrupt ("
+              << e.what() << "); falling back to defaults";
+        return {};
+    } catch (const std::exception& e) {
+        LOG() << "readJsonFromFile: " << fileName << " unexpected error ("
+              << e.what() << "); ignoring";
+        return {};
+    }
+    return jsonData;
 }
 
 
@@ -231,30 +252,38 @@ std::vector<std::string> JsonManager::split(const std::string& str, char delimit
 //-----------------------------------------------------------------------------
 void JsonManager::EnsureDefaultConfigExists()
 {
-    // Check if the file exists
-    std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
-    if (!std::filesystem::exists(filePath)) {
-        LOG() << DEF_CFG << " does not exist. Writing default config to file...";
-
-        // Write the default JSON to file
+    auto writeDefaults = [&](const char* reason) {
+        std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
+        LOG() << DEF_CFG << ": " << reason << " — writing fresh defaults";
         std::ofstream file(filePath);
         if (file.is_open()) {
-            file << default_config_.dump(4); // Pretty-print with 4 spaces of indentation
+            file << default_config_.dump(4);
             file.close();
             LOG() << "Default config written to " << DEF_CFG;
-        }
-        else {
+        } else {
             LOG() << "Failed to open " << DEF_CFG << " for writing";
         }
-    }
-    else {
-        LOG() << "Default config already exists. Checking for missing/default keys...";
+    };
 
-        nlohmann::json existing_json = readJsonFromFile(DEF_CFG);
-        nlohmann::ordered_json merged_json = reorderFillJson(existing_json);
-        writeJsonToFile(DEF_CFG, merged_json);
-        LOG() << "Updated config written with defaults filled in";
+    std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
+    if (!std::filesystem::exists(filePath)) {
+        writeDefaults("does not exist");
+        return;
     }
+
+    LOG() << "Default config already exists. Checking for missing/default keys...";
+    nlohmann::json existing_json = readJsonFromFile(DEF_CFG);
+
+    // readJsonFromFile already swallows parse errors and returns {}. If the
+    // file was empty/corrupt or otherwise unusable as an object, regenerate.
+    if (existing_json.is_null() || !existing_json.is_object() || existing_json.empty()) {
+        writeDefaults("empty or corrupt");
+        return;
+    }
+
+    nlohmann::ordered_json merged_json = reorderFillJson(existing_json);
+    writeJsonToFile(DEF_CFG, merged_json);
+    LOG() << "Updated config written with defaults filled in";
 }
 
 
@@ -264,7 +293,12 @@ void JsonManager::EnsureDefaultConfigExists()
 template <typename T>
 T JsonManager::getValue(const nlohmann::json& jsonConfig, const std::string& key) {
     if (jsonConfig.contains(key)) {
-        return jsonConfig[key].get<T>();
+        try {
+            return jsonConfig[key].get<T>();
+        } catch (const nlohmann::json::exception& e) {
+            LOG() << "getValue: key \"" << key << "\" wrong type ("
+                  << e.what() << "); using default";
+        }
     }
     return default_config_[key].get<T>();
 }
@@ -278,6 +312,22 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
     try {
         // Read the JSON configuration from the file
         nlohmann::json jsonConfig = readJsonFromFile(DEF_CFG);
+
+        // If the file was missing/empty/corrupt, readJsonFromFile returned {}.
+        // Recreate it from the in-memory defaults so subsequent loads, the
+        // OSD menu, and any future SaveFullConfigToJson all see a coherent
+        // baseline on disk.
+        if (jsonConfig.is_null() || !jsonConfig.is_object() || jsonConfig.empty()) {
+            LOG() << "LoadParamsFromJson: " << DEF_CFG
+                  << " missing/empty/corrupt — regenerating from defaults";
+            std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
+            std::ofstream file(filePath);
+            if (file.is_open()) {
+                file << default_config_.dump(4);
+                file.close();
+            }
+            jsonConfig = default_config_;  // continue with in-memory defaults
+        }
 
         // Load values directly from the base level of the JSON
         config.display_index = getValue<int>(jsonConfig, "display_index");
@@ -349,9 +399,19 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         // Read the JSON configuration from the file
         nlohmann::json jsonConfig = readJsonFromFile(filename);
 
-        if (jsonConfig.is_null() && filename != DEF_CFG) {
-            LOG() << "No profile found for " << filename;
+        // readJsonFromFile returns {} for missing, empty, or corrupt files.
+        // For game profiles that's a "no profile" signal; for default_config
+        // we fall through with an empty json so getValue<>() pulls every key
+        // from default_config_.
+        if ((jsonConfig.is_null() || !jsonConfig.is_object() || jsonConfig.empty())
+            && filename != DEF_CFG) {
+            LOG() << "No profile (or unreadable) for " << filename;
             return false;
+        }
+        if (jsonConfig.is_null() || !jsonConfig.is_object() || jsonConfig.empty()) {
+            LOG() << "LoadProfileFromJson: " << filename
+                  << " missing/empty/corrupt — using in-memory defaults";
+            jsonConfig = default_config_;
         }
 
         // Profile settings
@@ -423,9 +483,10 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         config.user_load_key.resize(config.num_user_settings);
         config.user_store_key.resize(config.num_user_settings);
         config.user_key_type.resize(config.num_user_settings);
-        config.user_depth.resize(config.num_user_settings);
-        config.user_convergence.resize(config.num_user_settings);
-        config.user_fov.resize(config.num_user_settings);
+        config.user_depth.assign(config.num_user_settings, std::vector<float>{});
+        config.user_convergence.assign(config.num_user_settings, std::vector<float>{});
+        config.user_fov.assign(config.num_user_settings, std::vector<float>{});
+        config.user_preset_index.assign(config.num_user_settings, 0);
         config.prev_depth.resize(config.num_user_settings);
         config.prev_convergence.resize(config.num_user_settings);
         config.prev_fov.resize(config.num_user_settings);
@@ -465,14 +526,27 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
                 config.user_key_type[i] = KeyBindTypes[config.user_type_str[i]];
             }
 
-            config.user_depth[i] = user_setting.at("user_depth").get<float>();
-            config.user_convergence[i] = user_setting.at("user_convergence").get<float>();
-            if (user_setting.contains("user_fov") && user_setting["user_fov"].is_number()) {
-                config.user_fov[i] = user_setting["user_fov"].get<float>();
+            // Each preset value can be a scalar (legacy) or an array (cycle).
+            auto readNums = [](const nlohmann::json& v) {
+                std::vector<float> out;
+                if (v.is_number()) out.push_back(v.get<float>());
+                else if (v.is_array()) for (auto& e : v) if (e.is_number()) out.push_back(e.get<float>());
+                return out;
+            };
+            config.user_depth[i]       = readNums(user_setting.at("user_depth"));
+            config.user_convergence[i] = readNums(user_setting.at("user_convergence"));
+            if (user_setting.contains("user_fov")) {
+                config.user_fov[i] = readNums(user_setting["user_fov"]);
             }
-            else {
-                config.user_fov[i] = config.fov;
-            }
+            // Pad missing fov to match depth/conv length, defaulting to global fov.
+            const size_t n = (std::max)(config.user_depth[i].size(),
+                                        config.user_convergence[i].size());
+            if (config.user_depth[i].empty())       config.user_depth[i].push_back(0.0f);
+            if (config.user_convergence[i].empty()) config.user_convergence[i].push_back(1.0f);
+            while (config.user_depth[i].size()       < n) config.user_depth[i].push_back(config.user_depth[i].back());
+            while (config.user_convergence[i].size() < n) config.user_convergence[i].push_back(config.user_convergence[i].back());
+            while (config.user_fov[i].size()         < n) config.user_fov[i].push_back(config.fov);
+            config.user_preset_index[i] = 0;
         }
 
     }
@@ -508,16 +582,23 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
     jsonConfig["ctrl_deadzone"] = config.ctrl_deadzone;
     jsonConfig["ctrl_sensitivity"] = config.ctrl_sensitivity;
 
-    // Store user settings as an array, falling back to defaults if none are set
+    // Store user settings as an array, falling back to defaults if none are set.
+    // Each preset value is written as a scalar when only one entry exists
+    // (preserves legacy file format) or as an array for multi-preset cycles.
+    auto writePreset = [](nlohmann::ordered_json& obj, const char* key,
+                          const std::vector<float>& vals) {
+        if (vals.size() == 1) obj[key] = vals[0];
+        else                  obj[key] = vals;
+    };
     if (config.num_user_settings > 0) {
         for (size_t i = 0; i < config.num_user_settings; i++) {
             nlohmann::ordered_json userSettings;
             userSettings["user_load_key"]   = config.user_load_str[i];
             userSettings["user_store_key"]  = config.user_store_str[i];
             userSettings["user_key_type"]   = config.user_type_str[i];
-            userSettings["user_depth"]      = config.user_depth[i];
-            userSettings["user_convergence"]= config.user_convergence[i];
-            userSettings["user_fov"]        = config.user_fov[i];
+            writePreset(userSettings, "user_depth",       config.user_depth[i]);
+            writePreset(userSettings, "user_convergence", config.user_convergence[i]);
+            writePreset(userSettings, "user_fov",         config.user_fov[i]);
             jsonConfig["user_settings"].push_back(userSettings);
         }
     }
@@ -530,21 +611,108 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Save HMD Offsets to default_config.json
+// Purpose: Save the FULL configuration (all driver-wide + per-profile keys)
+//          to a JSON file. Mirrors the union of keys read by
+//          LoadParamsFromJson + LoadProfileFromJson so saved output round-trips
+//          cleanly. Use this for "Save default_config.json".
 //-----------------------------------------------------------------------------
-void JsonManager::SaveHmdOffsets(StereoDisplayDriverConfiguration& config)
+void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDisplayDriverConfiguration& config)
 {
-    nlohmann::json existing_json = readJsonFromFile(DEF_CFG);
-    existing_json["hmd_height"] = config.hmd_height;
-    existing_json["hmd_x"] = config.hmd_x;
-    existing_json["hmd_y"] = config.hmd_y;
-    existing_json["hmd_yaw"] = config.hmd_yaw;
-    existing_json["trk_flt_rot_sens"] = config.trk_flt_rot_sens;
-    existing_json["trk_flt_pos_sens"] = config.trk_flt_pos_sens;
-    existing_json["trk_flt_rot_dz"] = config.trk_flt_rot_dz;
-    existing_json["trk_flt_pos_dz"] = config.trk_flt_pos_dz;
-    existing_json["trk_flt_zoom_smooth"] = config.trk_flt_zoom_smooth;
-    existing_json["trk_flt_max_zoom"] = config.trk_flt_max_zoom;
-    nlohmann::ordered_json merged_json = reorderFillJson(existing_json);
-    writeJsonToFile(DEF_CFG, merged_json);
+    nlohmann::ordered_json j;
+
+    // Display / output
+    j["display_index"]   = config.display_index;
+    j["output_mode"]     = OutputModeToString(config.output_mode);
+    j["eye_swap"]        = config.eye_swap;
+    j["render_width"]    = config.render_width;
+    j["render_height"]   = config.render_height;
+
+    // HMD pose
+    j["hmd_height"]      = config.hmd_height;
+    j["hmd_x"]           = config.hmd_x;
+    j["hmd_y"]           = config.hmd_y;
+    j["hmd_yaw"]         = config.hmd_yaw;
+
+    // Stereo
+    j["aspect_ratio"]    = config.aspect_ratio;
+    j["fov"]             = config.fov;
+    j["depth"]           = config.depth;
+    j["convergence"]     = config.convergence;
+    j["async_enable"]    = config.async_enable;
+
+    // Misc / system
+    j["disable_hotkeys"] = config.disable_hotkeys;
+    j["dash_enable"]     = config.dash_enable;
+    j["auto_focus"]      = config.auto_focus;
+
+    // Controller / tracking inputs
+    j["pitch_enable"]    = config.pitch_enable;
+    j["yaw_enable"]      = config.yaw_enable;
+    j["use_open_track"]  = config.use_open_track;
+    j["open_track_port"] = config.open_track_port;
+
+    // Track filter
+    j["use_track_filter"]    = config.use_track_filter;
+    j["trk_flt_rot_sens"]    = config.trk_flt_rot_sens;
+    j["trk_flt_pos_sens"]    = config.trk_flt_pos_sens;
+    j["trk_flt_rot_dz"]      = config.trk_flt_rot_dz;
+    j["trk_flt_pos_dz"]      = config.trk_flt_pos_dz;
+    j["trk_flt_zoom_smooth"] = config.trk_flt_zoom_smooth;
+    j["trk_flt_max_zoom"]    = config.trk_flt_max_zoom;
+
+    // LeiaSR head tracking
+    j["sr_filter_pos_mincutoff"] = config.sr_filter_pos_mincutoff;
+    j["sr_filter_pos_beta"]      = config.sr_filter_pos_beta;
+    j["sr_filter_rot_mincutoff"] = config.sr_filter_rot_mincutoff;
+    j["sr_filter_rot_beta"]      = config.sr_filter_rot_beta;
+    j["sr_angle_deadzone_deg"]   = config.sr_angle_deadzone_deg;
+    j["sr_sens_yaw"]             = config.sr_sens_yaw;
+    j["sr_sens_pitch"]           = config.sr_sens_pitch;
+    j["sr_sens_roll"]            = config.sr_sens_roll;
+    j["sr_max_yaw"]              = config.sr_max_yaw;
+    j["sr_max_pitch"]            = config.sr_max_pitch;
+    j["sr_max_roll"]             = config.sr_max_roll;
+    j["sr_track_mode"]           = config.sr_track_mode;
+
+    // Scripting
+    j["launch_script"]   = config.launch_script;
+
+    // Controller key bindings (string form is what the JSON stores)
+    j["pose_reset_key"]  = config.pose_reset_str;
+    j["ctrl_toggle_key"] = config.ctrl_toggle_str;
+    j["ctrl_toggle_type"]= config.ctrl_type_str;
+    j["pitch_radius"]    = config.pitch_radius;
+    j["ctrl_deadzone"]   = config.ctrl_deadzone;
+    j["ctrl_sensitivity"]= config.ctrl_sensitivity;
+
+    // user_settings array — write whatever's live, fall back to defaults if
+    // none configured. Scalar form for single-preset rows, array for cycles.
+    auto writePreset = [](nlohmann::ordered_json& obj, const char* key,
+                          const std::vector<float>& vals) {
+        if (vals.size() == 1) obj[key] = vals[0];
+        else                  obj[key] = vals;
+    };
+    if (config.num_user_settings > 0) {
+        nlohmann::ordered_json arr = nlohmann::ordered_json::array();
+        for (size_t i = 0; i < config.num_user_settings; ++i) {
+            nlohmann::ordered_json u;
+            u["user_load_key"]    = config.user_load_str[i];
+            u["user_store_key"]   = config.user_store_str[i];
+            u["user_key_type"]    = config.user_type_str[i];
+            writePreset(u, "user_depth",       config.user_depth[i]);
+            writePreset(u, "user_convergence", config.user_convergence[i]);
+            writePreset(u, "user_fov",         config.user_fov[i]);
+            arr.push_back(u);
+        }
+        j["user_settings"] = arr;
+    } else {
+        j["user_settings"] = default_config_.at("user_settings");
+    }
+
+    // Re-key in canonical default_config_ order so the file stays diff-friendly
+    // and any keys we forgot above get backfilled from the defaults.
+    nlohmann::ordered_json merged = reorderFillJson(j);
+    writeJsonToFile(filename, merged);
 }
+
+

@@ -494,6 +494,38 @@ inline std::string ApplyUserSettingsHotkeys(
         if (cfg.sleep_count[i] > 0)
             cfg.sleep_count[i]--;
 
+        if (cfg.user_depth[i].empty()) continue;  // malformed row, skip
+
+        // Bounds-clamp the cycle index in case the preset list shrunk.
+        if (i >= cfg.user_preset_index.size()) cfg.user_preset_index.resize(i + 1, 0);
+        if (cfg.user_preset_index[i] >= cfg.user_depth[i].size())
+            cfg.user_preset_index[i] = 0;
+
+        const size_t presets = cfg.user_depth[i].size();
+        size_t idx = cfg.user_preset_index[i];
+
+        // HOLD ignores cycling — it just toggles preset[0] in/out.
+        const size_t hold_idx = 0;
+
+        // Helpers to fetch a preset's values; tolerates short conv/fov vectors.
+        auto getD = [&](size_t k) { return cfg.user_depth[i][k]; };
+        auto getC = [&](size_t k) {
+            return k < cfg.user_convergence[i].size()
+                 ? cfg.user_convergence[i][k]
+                 : (cfg.user_convergence[i].empty() ? 1.0f : cfg.user_convergence[i].back());
+        };
+        auto getF = [&](size_t k) {
+            return k < cfg.user_fov[i].size()
+                 ? cfg.user_fov[i][k]
+                 : (cfg.user_fov[i].empty() ? 0.0f : cfg.user_fov[i].back());
+        };
+        auto applyPreset = [&](size_t k) {
+            b.setDepth(b.ctx, getD(k));
+            b.setConv(b.ctx,  getC(k));
+            b.setFov(b.ctx,   getF(k));
+            applied();
+        };
+
         const bool loadPressed =
             (cfg.load_xinput[i] && got_xinput &&
                 ((xstate & static_cast<DWORD>(cfg.user_load_key[i])) ==
@@ -510,11 +542,7 @@ inline std::string ApplyUserSettingsHotkeys(
                 cfg.prev_convergence[i] = b.getConv(b.ctx);
                 cfg.prev_fov[i] = b.getFov(b.ctx);
                 cfg.was_held[i] = true;
-
-                b.setDepth(b.ctx, cfg.user_depth[i]);
-                b.setConv(b.ctx, cfg.user_convergence[i]);
-                b.setFov(b.ctx, cfg.user_fov[i]);
-                applied();
+                applyPreset(hold_idx);
             }
             else if (kt == TOGGLE && cfg.sleep_count[i] < 1)
             {
@@ -524,35 +552,34 @@ inline std::string ApplyUserSettingsHotkeys(
                 const float curC = b.getConv(b.ctx);
                 const float curF = b.getFov(b.ctx);
 
+                // If we currently match this preset, advance to the next; if
+                // we cycle back to where we started, revert to prev.
                 const bool matches =
-                    NearlyEqual(curD, cfg.user_depth[i], maxDelta) &&
-                    NearlyEqual(curC, cfg.user_convergence[i], maxDelta) &&
-                    NearlyEqual(curF, cfg.user_fov[i], maxDelta);
+                    NearlyEqual(curD, getD(idx), maxDelta) &&
+                    NearlyEqual(curC, getC(idx), maxDelta) &&
+                    NearlyEqual(curF, getF(idx), maxDelta);
 
-                if (matches)
-                {
+                if (matches && presets > 1) {
+                    idx = (idx + 1) % presets;
+                    cfg.user_preset_index[i] = idx;
+                    applyPreset(idx);
+                } else if (matches) {
                     b.setDepth(b.ctx, cfg.prev_depth[i]);
-                    b.setConv(b.ctx, cfg.prev_convergence[i]);
-                    b.setFov(b.ctx, cfg.prev_fov[i]);
-                }
-                else
-                {
+                    b.setConv(b.ctx,  cfg.prev_convergence[i]);
+                    b.setFov(b.ctx,   cfg.prev_fov[i]);
+                    applied();
+                } else {
                     cfg.prev_depth[i] = curD;
                     cfg.prev_convergence[i] = curC;
                     cfg.prev_fov[i] = curF;
-
-                    b.setDepth(b.ctx, cfg.user_depth[i]);
-                    b.setConv(b.ctx, cfg.user_convergence[i]);
-                    b.setFov(b.ctx, cfg.user_fov[i]);
+                    applyPreset(idx);
                 }
-                applied();
             }
-            else if (kt == SWITCH)
+            else if (kt == SWITCH && cfg.sleep_count[i] < 1)
             {
-                b.setDepth(b.ctx, cfg.user_depth[i]);
-                b.setConv(b.ctx, cfg.user_convergence[i]);
-                b.setFov(b.ctx, cfg.user_fov[i]);
-                applied();
+                cfg.sleep_count[i] = cfg.sleep_count_max;
+                applyPreset(idx);
+                cfg.user_preset_index[i] = (idx + 1) % presets;
             }
         }
         else if (cfg.user_key_type[i] == HOLD && cfg.was_held[i])
@@ -565,15 +592,20 @@ inline std::string ApplyUserSettingsHotkeys(
             applied();
         }
 
-        // Store hotkey (VRto3D behavior, shared)
+        // Store hotkey overwrites the CURRENT cycle preset only — preserves
+        // any other presets in the cycle.
         if (isDown(cfg.user_store_key[i]))
         {
-            cfg.user_depth[i] = b.getDepth(b.ctx);
-            cfg.user_convergence[i] = b.getConv(b.ctx);
-            cfg.user_fov[i] = b.getFov(b.ctx);
+            cfg.user_depth[i][idx] = b.getDepth(b.ctx);
+            if (idx < cfg.user_convergence[i].size())
+                cfg.user_convergence[i][idx] = b.getConv(b.ctx);
+            if (idx < cfg.user_fov[i].size())
+                cfg.user_fov[i][idx] = b.getFov(b.ctx);
 
             BeepSuccess();
-            storeMsg = "Hotkey " + cfg.user_load_str[i] + " updated";
+            storeMsg = "Hotkey " + cfg.user_load_str[i] + " preset "
+                     + std::to_string(idx + 1) + "/" + std::to_string(presets)
+                     + " updated";
         }
     }
 

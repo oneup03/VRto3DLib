@@ -32,7 +32,13 @@ public:
     void LoadParamsFromJson(StereoDisplayDriverConfiguration& config);
     bool LoadProfileFromJson(const std::string& filename, StereoDisplayDriverConfiguration& config);
     void SaveProfileToJson(const std::string& filename, StereoDisplayDriverConfiguration& config);
-    void SaveHmdOffsets(StereoDisplayDriverConfiguration& config);
+    // Like SaveProfileToJson, but writes the FULL set of config keys —
+    // including driver-wide settings (display_index, output_mode, render
+    // dims, OpenTrack, track filter, LeiaSR head-tracking, launch_script
+    // etc.) that the per-game profile save deliberately omits. Use this
+    // for "Save default_config.json" from the OSD menu so changes to those
+    // global settings persist.
+    void SaveFullConfigToJson(const std::string& filename, StereoDisplayDriverConfiguration& config);
 
 private:
     

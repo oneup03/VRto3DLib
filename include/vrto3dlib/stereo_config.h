@@ -178,9 +178,17 @@ struct StereoDisplayDriverConfiguration
     std::vector<std::string> user_store_str;
     std::vector<int32_t> user_key_type;
     std::vector<std::string> user_type_str;
-    std::vector<float> user_depth;
-    std::vector<float> user_convergence;
-    std::vector<float> user_fov;
+    // Per-row preset lists. Each element is a list of presets the user can
+    // cycle through with a single hotkey (comma-separated in the OSD menu).
+    // Length 1 (== legacy single-preset) is the common case.
+    std::vector<std::vector<float>> user_depth;
+    std::vector<std::vector<float>> user_convergence;
+    std::vector<std::vector<float>> user_fov;
+    // Current cycle index into user_depth[i] / user_convergence[i] / user_fov[i].
+    // Advanced on each load-key press (SWITCH/TOGGLE modes). HOLD always uses
+    // index 0.
+    std::vector<size_t> user_preset_index;
+    // "Previous" snapshots for HOLD/TOGGLE revert-on-release / revert-on-match.
     std::vector<float> prev_depth;
     std::vector<float> prev_convergence;
     std::vector<float> prev_fov;
