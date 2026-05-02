@@ -98,21 +98,18 @@ private:
         {"user_settings", {
             {
                 {"user_load_key", "VK_NUMPAD1"},
-                {"user_store_key", "VK_NUMPAD4"},
                 {"user_key_type", "switch"},
                 {"user_depth", 0.1},
                 {"user_convergence", 1.0}
             },
             {
                 {"user_load_key", "XINPUT_GAMEPAD_GUIDE"},
-                {"user_store_key", "VK_NUMPAD5"},
                 {"user_key_type", "toggle"},
                 {"user_depth", 0.065},
                 {"user_convergence", 1.0}
             },
             {
                 {"user_load_key", "VK_NUMPAD3"},
-                {"user_store_key", "VK_NUMPAD6"},
                 {"user_key_type", "hold"},
                 {"user_depth", 0.065},
                 {"user_convergence", 1.0},

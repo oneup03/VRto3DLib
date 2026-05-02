@@ -515,9 +515,14 @@ inline std::string ApplyUserSettingsHotkeys(
                  : (cfg.user_convergence[i].empty() ? 1.0f : cfg.user_convergence[i].back());
         };
         auto getF = [&](size_t k) {
-            return k < cfg.user_fov[i].size()
-                 ? cfg.user_fov[i][k]
-                 : (cfg.user_fov[i].empty() ? 0.0f : cfg.user_fov[i].back());
+            float f = k < cfg.user_fov[i].size()
+                    ? cfg.user_fov[i][k]
+                    : (cfg.user_fov[i].empty() ? 0.0f : cfg.user_fov[i].back());
+            // FoV == 0 in the user-hotkey row is the documented sentinel for
+            // "don't override — keep the active profile FoV". Falls back to
+            // the live cfg.fov so the press doesn't snap the FoV to zero.
+            if (f <= 0.0f) f = cfg.fov;
+            return f;
         };
         auto applyPreset = [&](size_t k) {
             b.setDepth(b.ctx, getD(k));
@@ -592,21 +597,8 @@ inline std::string ApplyUserSettingsHotkeys(
             applied();
         }
 
-        // Store hotkey overwrites the CURRENT cycle preset only — preserves
-        // any other presets in the cycle.
-        if (isDown(cfg.user_store_key[i]))
-        {
-            cfg.user_depth[i][idx] = b.getDepth(b.ctx);
-            if (idx < cfg.user_convergence[i].size())
-                cfg.user_convergence[i][idx] = b.getConv(b.ctx);
-            if (idx < cfg.user_fov[i].size())
-                cfg.user_fov[i][idx] = b.getFov(b.ctx);
-
-            BeepSuccess();
-            storeMsg = "Hotkey " + cfg.user_load_str[i] + " preset "
-                     + std::to_string(idx + 1) + "/" + std::to_string(presets)
-                     + " updated";
-        }
+        // user_store_key removed — the OSD's "Copy Live" button replaces the
+        // runtime store-hotkey workflow.
     }
 
     return storeMsg;

@@ -491,7 +491,6 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         // Resize vectors based on the size of the user_settings array
         config.num_user_settings = user_settings_array.size();
         config.user_load_key.resize(config.num_user_settings);
-        config.user_store_key.resize(config.num_user_settings);
         config.user_key_type.resize(config.num_user_settings);
         config.user_depth.assign(config.num_user_settings, std::vector<float>{});
         config.user_convergence.assign(config.num_user_settings, std::vector<float>{});
@@ -504,7 +503,6 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         config.load_xinput.resize(config.num_user_settings);
         config.sleep_count.resize(config.num_user_settings);
         config.user_load_str.resize(config.num_user_settings);
-        config.user_store_str.resize(config.num_user_settings);
         config.user_type_str.resize(config.num_user_settings);
 
         for (size_t i = 0; i < config.num_user_settings; ++i) {
@@ -526,10 +524,9 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
                 config.load_xinput[i] = true;
             }
 
-            config.user_store_str[i] = user_setting.at("user_store_key").get<std::string>();
-            if (VirtualKeyMappings.find(config.user_store_str[i]) != VirtualKeyMappings.end()) {
-                config.user_store_key[i] = VirtualKeyMappings[config.user_store_str[i]];
-            }
+            // user_store_key was removed; legacy profiles still containing the
+            // field are silently ignored (the OSD's "Copy Live" button replaces
+            // the workflow that needed a runtime store-hotkey).
 
             config.user_type_str[i] = user_setting.at("user_key_type").get<std::string>();
             if (KeyBindTypes.find(config.user_type_str[i]) != KeyBindTypes.end()) {
@@ -607,7 +604,6 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
         for (size_t i = 0; i < config.num_user_settings; i++) {
             nlohmann::ordered_json userSettings;
             userSettings["user_load_key"]   = config.user_load_str[i];
-            userSettings["user_store_key"]  = config.user_store_str[i];
             userSettings["user_key_type"]   = config.user_type_str[i];
             writePreset(userSettings, "user_depth",       config.user_depth[i]);
             writePreset(userSettings, "user_convergence", config.user_convergence[i]);
@@ -714,7 +710,6 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
         for (size_t i = 0; i < config.num_user_settings; ++i) {
             nlohmann::ordered_json u;
             u["user_load_key"]    = config.user_load_str[i];
-            u["user_store_key"]   = config.user_store_str[i];
             u["user_key_type"]    = config.user_type_str[i];
             writePreset(u, "user_depth",       config.user_depth[i]);
             writePreset(u, "user_convergence", config.user_convergence[i]);

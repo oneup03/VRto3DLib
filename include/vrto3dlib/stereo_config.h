@@ -185,8 +185,6 @@ struct StereoDisplayDriverConfiguration
     size_t num_user_settings = 0;
     std::vector<int32_t> user_load_key;
     std::vector<std::string> user_load_str;
-    std::vector<int32_t> user_store_key;
-    std::vector<std::string> user_store_str;
     std::vector<int32_t> user_key_type;
     std::vector<std::string> user_type_str;
     // Per-row preset lists. Each element is a list of presets the user can
