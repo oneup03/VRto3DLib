@@ -45,6 +45,7 @@ OutputMode OutputModeFromString(const std::string& s, OutputMode fallback)
     if (s == "Checkerboard")                   return OutputMode::Checkerboard;
     if (s == "LeiaSR")                         return OutputMode::LeiaSR;
     if (s == "NvidiaDX9")                      return OutputMode::NvidiaDX9;
+    if (s == "WibbleWobble")                   return OutputMode::WibbleWobble;
     if (s == "VirtualDesktop")                 return OutputMode::VirtualDesktop;
     if (s == "FramePacked720p60")              return OutputMode::FramePacked720p60;
     if (s == "FramePacked1080p24")             return OutputMode::FramePacked1080p24;
@@ -73,6 +74,7 @@ std::string OutputModeToString(OutputMode m)
         case OutputMode::Checkerboard:                   return "Checkerboard";
         case OutputMode::LeiaSR:                         return "LeiaSR";
         case OutputMode::NvidiaDX9:                      return "NvidiaDX9";
+        case OutputMode::WibbleWobble:                   return "WibbleWobble";
         case OutputMode::VirtualDesktop:                 return "VirtualDesktop";
         case OutputMode::FramePacked720p60:              return "FramePacked720p60";
         case OutputMode::FramePacked1080p24:             return "FramePacked1080p24";

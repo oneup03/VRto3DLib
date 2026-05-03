@@ -31,6 +31,7 @@ enum class OutputMode : int {
     Checkerboard,                  // W  x H, (x+y)%2 eye selection
     LeiaSR,                        // alternate: hand SRV to SR::IDX11Weaver1
     NvidiaDX9,                     // alternate: 3D Vision via NVAPI + D3D9Ex
+    WibbleWobble,                  // alternate: hand SBS texture to WibbleWobbleClient via shared memory
     VirtualDesktop,                // Full-SbS 2W x H in a 2W x 2H window with black bars
     FramePacked720p60,             // HDMI 1.4 frame pack: 1280x1470 @60Hz (30px gap)
     FramePacked1080p24,            // HDMI 1.4 frame pack: 1920x2205 @24Hz (45px gap)
