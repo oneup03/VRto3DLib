@@ -32,16 +32,18 @@ public:
     void LoadParamsFromJson(StereoDisplayDriverConfiguration& config);
     bool LoadProfileFromJson(const std::string& filename, StereoDisplayDriverConfiguration& config);
     void SaveProfileToJson(const std::string& filename, StereoDisplayDriverConfiguration& config);
-    void SaveHmdOffsets(StereoDisplayDriverConfiguration& config);
+    void SaveFullConfigToJson(const std::string& filename, StereoDisplayDriverConfiguration& config);
 
 private:
     
     // Create the example default JSON
     nlohmann::ordered_json default_config_ = {
         {"display_index", 0},
-        {"multi_display", false},
+        {"output_mode", "SbS"},
+        {"eye_swap", false},
         {"render_width", 1920},
         {"render_height", 1080},
+        {"display_frequency", 0.0},
         {"hmd_height", 1.0},
         {"hmd_x", 0.0},
         {"hmd_y", 0.0},
@@ -52,14 +54,11 @@ private:
         {"convergence", 1.0},
         {"async_enable", false},
         {"disable_hotkeys", false},
-        {"tab_enable", false},
-        {"framepack_offset", 0},
-        {"reverse_enable", false},
-        {"vd_fsbs_hack", false},
+        {"auto_depth_enabled", false},
+        {"auto_depth_target_disparity", 0.005},
+        {"auto_depth_smoothing", 0.08},
         {"dash_enable", false},
         {"auto_focus", true},
-        {"display_latency", 0.011},
-        {"display_frequency", 60.0},
         {"pitch_enable", false},
         {"yaw_enable", false},
         {"use_open_track", false},
@@ -71,6 +70,18 @@ private:
         {"trk_flt_pos_dz", 0.02},
         {"trk_flt_zoom_smooth", 0.0},
         {"trk_flt_max_zoom", 10.0},
+        {"sr_filter_pos_mincutoff", 0.08},
+        {"sr_filter_pos_beta", 0.08},
+        {"sr_filter_rot_mincutoff", 0.12},
+        {"sr_filter_rot_beta", 0.01},
+        {"sr_angle_deadzone_deg", 0.2},
+        {"sr_sens_yaw", 1.0},
+        {"sr_sens_pitch", 1.0},
+        {"sr_sens_roll", 1.0},
+        {"sr_max_yaw", 70.0},
+        {"sr_max_pitch", 70.0},
+        {"sr_max_roll", 70.0},
+        {"sr_track_mode", "XYZ_YawPitch"},
         {"launch_script", ""},
         {"pose_reset_key", "VK_NUMPAD7"},
         {"ctrl_toggle_key", "VK_NUMPAD8"},
@@ -81,21 +92,18 @@ private:
         {"user_settings", {
             {
                 {"user_load_key", "VK_NUMPAD1"},
-                {"user_store_key", "VK_NUMPAD4"},
                 {"user_key_type", "switch"},
                 {"user_depth", 0.1},
                 {"user_convergence", 1.0}
             },
             {
                 {"user_load_key", "XINPUT_GAMEPAD_GUIDE"},
-                {"user_store_key", "VK_NUMPAD5"},
                 {"user_key_type", "toggle"},
                 {"user_depth", 0.065},
                 {"user_convergence", 1.0}
             },
             {
                 {"user_load_key", "VK_NUMPAD3"},
-                {"user_store_key", "VK_NUMPAD6"},
                 {"user_key_type", "hold"},
                 {"user_depth", 0.065},
                 {"user_convergence", 1.0},

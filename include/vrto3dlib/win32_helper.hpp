@@ -450,33 +450,6 @@ inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration
             << " (display order " << selected.display_index << ", " << selected.device_name.c_str() << ") for window bounds ("
             << selected.x << "," << selected.y << " " << selected.width << "x" << selected.height << ")";
     }
-
-    if (config.multi_display) {
-        const int32_t contiguous_right_x = selected.x + static_cast<int32_t>(selected.width);
-        const auto right_monitor_it = std::find_if(monitors.begin(), monitors.end(), [&](const MonitorBounds& monitor) {
-            return monitor.x == contiguous_right_x
-                && monitor.y == selected.y
-                && monitor.width == selected.width
-                && monitor.height == selected.height;
-            });
-
-        if (right_monitor_it != monitors.end()) {
-            const MonitorBounds& right_monitor = *right_monitor_it;
-            config.window_width = static_cast<int32_t>(selected.width + right_monitor.width);
-
-            LOG()
-                << "multi_display=true. Found contiguous right display order " << right_monitor.display_index
-                << " (" << right_monitor.device_name.c_str() << ") with matching bounds; using two-display span ("
-                << config.window_x << "," << config.window_y << " " << config.window_width << "x" << config.window_height << ")";
-        }
-        else {
-            LOG()
-                << "multi_display=true but no contiguous right display matched required bounds (same width/height, same top Y, exact right adjacency)."
-                << " Keeping single-display bounds ("
-                << config.window_x << "," << config.window_y << " " << config.window_width << "x" << config.window_height << ")";
-        }
-    }
-
     return true;
 }
 
@@ -516,6 +489,43 @@ inline std::string ApplyUserSettingsHotkeys(
         if (cfg.sleep_count[i] > 0)
             cfg.sleep_count[i]--;
 
+        if (cfg.user_depth[i].empty()) continue;  // malformed row, skip
+
+        // Bounds-clamp the cycle index in case the preset list shrunk.
+        if (i >= cfg.user_preset_index.size()) cfg.user_preset_index.resize(i + 1, 0);
+        if (cfg.user_preset_index[i] >= cfg.user_depth[i].size())
+            cfg.user_preset_index[i] = 0;
+
+        const size_t presets = cfg.user_depth[i].size();
+        size_t idx = cfg.user_preset_index[i];
+
+        // HOLD ignores cycling — it just toggles preset[0] in/out.
+        const size_t hold_idx = 0;
+
+        // Helpers to fetch a preset's values; tolerates short conv/fov vectors.
+        auto getD = [&](size_t k) { return cfg.user_depth[i][k]; };
+        auto getC = [&](size_t k) {
+            return k < cfg.user_convergence[i].size()
+                 ? cfg.user_convergence[i][k]
+                 : (cfg.user_convergence[i].empty() ? 1.0f : cfg.user_convergence[i].back());
+        };
+        auto getF = [&](size_t k) {
+            float f = k < cfg.user_fov[i].size()
+                    ? cfg.user_fov[i][k]
+                    : (cfg.user_fov[i].empty() ? 0.0f : cfg.user_fov[i].back());
+            // FoV == 0 in the user-hotkey row is the documented sentinel for
+            // "don't override — keep the active profile FoV". Falls back to
+            // the live cfg.fov so the press doesn't snap the FoV to zero.
+            if (f <= 0.0f) f = cfg.fov;
+            return f;
+        };
+        auto applyPreset = [&](size_t k) {
+            b.setDepth(b.ctx, getD(k));
+            b.setConv(b.ctx,  getC(k));
+            b.setFov(b.ctx,   getF(k));
+            applied();
+        };
+
         const bool loadPressed =
             (cfg.load_xinput[i] && got_xinput &&
                 ((xstate & static_cast<DWORD>(cfg.user_load_key[i])) ==
@@ -532,11 +542,7 @@ inline std::string ApplyUserSettingsHotkeys(
                 cfg.prev_convergence[i] = b.getConv(b.ctx);
                 cfg.prev_fov[i] = b.getFov(b.ctx);
                 cfg.was_held[i] = true;
-
-                b.setDepth(b.ctx, cfg.user_depth[i]);
-                b.setConv(b.ctx, cfg.user_convergence[i]);
-                b.setFov(b.ctx, cfg.user_fov[i]);
-                applied();
+                applyPreset(hold_idx);
             }
             else if (kt == TOGGLE && cfg.sleep_count[i] < 1)
             {
@@ -546,35 +552,34 @@ inline std::string ApplyUserSettingsHotkeys(
                 const float curC = b.getConv(b.ctx);
                 const float curF = b.getFov(b.ctx);
 
+                // If we currently match this preset, advance to the next; if
+                // we cycle back to where we started, revert to prev.
                 const bool matches =
-                    NearlyEqual(curD, cfg.user_depth[i], maxDelta) &&
-                    NearlyEqual(curC, cfg.user_convergence[i], maxDelta) &&
-                    NearlyEqual(curF, cfg.user_fov[i], maxDelta);
+                    NearlyEqual(curD, getD(idx), maxDelta) &&
+                    NearlyEqual(curC, getC(idx), maxDelta) &&
+                    NearlyEqual(curF, getF(idx), maxDelta);
 
-                if (matches)
-                {
+                if (matches && presets > 1) {
+                    idx = (idx + 1) % presets;
+                    cfg.user_preset_index[i] = idx;
+                    applyPreset(idx);
+                } else if (matches) {
                     b.setDepth(b.ctx, cfg.prev_depth[i]);
-                    b.setConv(b.ctx, cfg.prev_convergence[i]);
-                    b.setFov(b.ctx, cfg.prev_fov[i]);
-                }
-                else
-                {
+                    b.setConv(b.ctx,  cfg.prev_convergence[i]);
+                    b.setFov(b.ctx,   cfg.prev_fov[i]);
+                    applied();
+                } else {
                     cfg.prev_depth[i] = curD;
                     cfg.prev_convergence[i] = curC;
                     cfg.prev_fov[i] = curF;
-
-                    b.setDepth(b.ctx, cfg.user_depth[i]);
-                    b.setConv(b.ctx, cfg.user_convergence[i]);
-                    b.setFov(b.ctx, cfg.user_fov[i]);
+                    applyPreset(idx);
                 }
-                applied();
             }
-            else if (kt == SWITCH)
+            else if (kt == SWITCH && cfg.sleep_count[i] < 1)
             {
-                b.setDepth(b.ctx, cfg.user_depth[i]);
-                b.setConv(b.ctx, cfg.user_convergence[i]);
-                b.setFov(b.ctx, cfg.user_fov[i]);
-                applied();
+                cfg.sleep_count[i] = cfg.sleep_count_max;
+                applyPreset(idx);
+                cfg.user_preset_index[i] = (idx + 1) % presets;
             }
         }
         else if (cfg.user_key_type[i] == HOLD && cfg.was_held[i])
@@ -585,17 +590,6 @@ inline std::string ApplyUserSettingsHotkeys(
             b.setConv(b.ctx, cfg.prev_convergence[i]);
             b.setFov(b.ctx, cfg.prev_fov[i]);
             applied();
-        }
-
-        // Store hotkey (VRto3D behavior, shared)
-        if (isDown(cfg.user_store_key[i]))
-        {
-            cfg.user_depth[i] = b.getDepth(b.ctx);
-            cfg.user_convergence[i] = b.getConv(b.ctx);
-            cfg.user_fov[i] = b.getFov(b.ctx);
-
-            BeepSuccess();
-            storeMsg = "Hotkey " + cfg.user_load_str[i] + " updated";
         }
     }
 
