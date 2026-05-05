@@ -61,6 +61,7 @@ OutputMode OutputModeFromString(const std::string& s, OutputMode fallback)
     if (s == "AnaglyphGreenMagentaDubois")     return OutputMode::AnaglyphGreenMagentaDubois;
     if (s == "AnaglyphGreenMagentaDeghosted")  return OutputMode::AnaglyphGreenMagentaDeghosted;
     if (s == "AnaglyphBlueAmber")              return OutputMode::AnaglyphBlueAmber;
+    if (s == "Mono")                           return OutputMode::Mono;
     return fallback;
 }
 
@@ -90,6 +91,7 @@ std::string OutputModeToString(OutputMode m)
         case OutputMode::AnaglyphGreenMagentaDubois:     return "AnaglyphGreenMagentaDubois";
         case OutputMode::AnaglyphGreenMagentaDeghosted:  return "AnaglyphGreenMagentaDeghosted";
         case OutputMode::AnaglyphBlueAmber:              return "AnaglyphBlueAmber";
+        case OutputMode::Mono:                           return "Mono";
     }
     return "SbS";
 }

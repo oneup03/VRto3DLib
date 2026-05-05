@@ -47,6 +47,7 @@ enum class OutputMode : int {
     AnaglyphGreenMagentaDubois,    // Dubois optimized G/M
     AnaglyphGreenMagentaDeghosted, // Deghosted G/M
     AnaglyphBlueAmber,             // ColorCode-style B/A
+    Mono,                          // single-eye view; eye_swap picks right eye instead of left
 };
 
 OutputMode OutputModeFromString(const std::string& s, OutputMode fallback = OutputMode::SbS);
