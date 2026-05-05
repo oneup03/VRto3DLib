@@ -450,11 +450,6 @@ inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration
             << " (display order " << selected.display_index << ", " << selected.device_name.c_str() << ") for window bounds ("
             << selected.x << "," << selected.y << " " << selected.width << "x" << selected.height << ")";
     }
-
-    // multi_display logic moved to vrto3d/src/platform/platform.h
-    // (ResolveTargetMonitors). The presenter chooses to span monitors based on
-    // OutputMode (DualDisplay / DualDisplayFlip), not a separate config flag.
-
     return true;
 }
 
@@ -596,9 +591,6 @@ inline std::string ApplyUserSettingsHotkeys(
             b.setFov(b.ctx, cfg.prev_fov[i]);
             applied();
         }
-
-        // user_store_key removed — the OSD's "Copy Live" button replaces the
-        // runtime store-hotkey workflow.
     }
 
     return storeMsg;

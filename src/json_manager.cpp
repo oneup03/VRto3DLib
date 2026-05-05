@@ -383,8 +383,6 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         }
         config.launch_script = getValue<std::string>(jsonConfig, "launch_script");
 
-        // display_latency / display_frequency are computed at driver activation
-        // from the target monitor; see MockControllerDeviceDriver::Activate.
         config.sleep_count_max = (int)(floor(1600.0 / (1000.0 / config.display_frequency)));
     }
     catch (const nlohmann::json::exception& e) {
@@ -525,10 +523,6 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
                 }
                 config.load_xinput[i] = true;
             }
-
-            // user_store_key was removed; legacy profiles still containing the
-            // field are silently ignored (the OSD's "Copy Live" button replaces
-            // the workflow that needed a runtime store-hotkey).
 
             config.user_type_str[i] = user_setting.at("user_key_type").get<std::string>();
             if (KeyBindTypes.find(config.user_type_str[i]) != KeyBindTypes.end()) {

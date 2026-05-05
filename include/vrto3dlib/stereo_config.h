@@ -29,9 +29,9 @@ enum class OutputMode : int {
     RowInterlaced,                 // W  x H, alternating rows (passive 3D TVs)
     ColInterlaced,                 // W  x H, alternating columns
     Checkerboard,                  // W  x H, (x+y)%2 eye selection
-    LeiaSR,                        // alternate: hand SRV to SR::IDX11Weaver1
+    LeiaSR,                        // alternate: SR Display Weaver
     NvidiaDX9,                     // alternate: 3D Vision via NVAPI + D3D9Ex
-    WibbleWobble,                  // alternate: hand SBS texture to WibbleWobbleClient via shared memory
+    WibbleWobble,                  // alternate: Frame Sequential via WibbleWobbleClient
     VirtualDesktop,                // Full-SbS 2W x H in a 2W x 2H window with black bars
     FramePacked720p60,             // HDMI 1.4 frame pack: 1280x1470 @60Hz (30px gap)
     FramePacked1080p24,            // HDMI 1.4 frame pack: 1920x2205 @24Hz (45px gap)
@@ -41,8 +41,8 @@ enum class OutputMode : int {
     DualDisplayFlip,               // DualDisplay, but the left image is flipped vertically
     AnaglyphRedCyan,               // simple R | GB split
     AnaglyphRedCyanDubois,         // Dubois optimized R/C
-    AnaglyphRedCyanDeghosted,      // Deghosted R/C (iaian7 / vectorform)
-    AnaglyphRedCyanCompromise,     // Compromise R/C (Dubois-derived, single-R-channel left)
+    AnaglyphRedCyanDeghosted,      // Deghosted R/C
+    AnaglyphRedCyanCompromise,     // Compromise R/C
     AnaglyphGreenMagenta,          // simple G | RB split
     AnaglyphGreenMagentaDubois,    // Dubois optimized G/M
     AnaglyphGreenMagentaDeghosted, // Deghosted G/M
