@@ -37,6 +37,7 @@ static std::unordered_map<std::string, int> VirtualKeyMappings = {
     // Keyboard keys
     {"VK_BACKSPACE", VK_BACK},
     {"VK_TAB", VK_TAB},
+    {"VK_RETURN", VK_RETURN},
     {"VK_SHIFT", VK_SHIFT},
     {"VK_CONTROL", VK_CONTROL},
     {"VK_MENU", VK_MENU},
@@ -98,6 +99,18 @@ static std::unordered_map<std::string, int> VirtualKeyMappings = {
     {"VK_OEM_PLUS", VK_OEM_PLUS},
     {"VK_LBRACKET", VK_OEM_4}, // [
     {"VK_RBRACKET", VK_OEM_6}, // ]
+    // Letters (VK code = ASCII upper-case)
+    {"VK_A", 'A'}, {"VK_B", 'B'}, {"VK_C", 'C'}, {"VK_D", 'D'},
+    {"VK_E", 'E'}, {"VK_F", 'F'}, {"VK_G", 'G'}, {"VK_H", 'H'},
+    {"VK_I", 'I'}, {"VK_J", 'J'}, {"VK_K", 'K'}, {"VK_L", 'L'},
+    {"VK_M", 'M'}, {"VK_N", 'N'}, {"VK_O", 'O'}, {"VK_P", 'P'},
+    {"VK_Q", 'Q'}, {"VK_R", 'R'}, {"VK_S", 'S'}, {"VK_T", 'T'},
+    {"VK_U", 'U'}, {"VK_V", 'V'}, {"VK_W", 'W'}, {"VK_X", 'X'},
+    {"VK_Y", 'Y'}, {"VK_Z", 'Z'},
+    // Top-row digits (VK code = ASCII digit). Distinct from VK_NUMPAD0..9.
+    {"VK_0", '0'}, {"VK_1", '1'}, {"VK_2", '2'}, {"VK_3", '3'},
+    {"VK_4", '4'}, {"VK_5", '5'}, {"VK_6", '6'}, {"VK_7", '7'},
+    {"VK_8", '8'}, {"VK_9", '9'},
 };
 // XInput gamepad buttons
 #define XINPUT_GAMEPAD_LEFT_TRIGGER  0x10000
