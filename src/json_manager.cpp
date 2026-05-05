@@ -543,6 +543,15 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
             if (user_setting.contains("user_fov")) {
                 config.user_fov[i] = readNums(user_setting["user_fov"]);
             }
+            // Only "toggle" mode supports multi-element preset cycles. For
+            // "switch" and "hold" rows, keep only the first value so older
+            // profiles saved under the previous (any-mode-cycles) contract get
+            // sanitized on load.
+            if (config.user_key_type[i] != TOGGLE) {
+                if (config.user_depth[i].size() > 1)       config.user_depth[i].resize(1);
+                if (config.user_convergence[i].size() > 1) config.user_convergence[i].resize(1);
+                if (config.user_fov[i].size() > 1)         config.user_fov[i].resize(1);
+            }
             // Pad missing fov to match depth/conv length, defaulting to global fov.
             const size_t n = (std::max)(config.user_depth[i].size(),
                                         config.user_convergence[i].size());
