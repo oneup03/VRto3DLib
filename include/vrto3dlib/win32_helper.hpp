@@ -704,7 +704,11 @@ inline bool IsProcessRunning(DWORD pid) {
 //-----------------------------------------------------------------------------
 // Purpose: Avoid profiling certain processes
 //-----------------------------------------------------------------------------
+// Entries are lowercase — caller compares against the lowered process name so
+// the match is case-insensitive (vendors occasionally ship the same exe with
+// different casing across versions).
 static const std::unordered_set<std::string> Skip_Processes = {
+        // SteamVR / Steam infrastructure
         "vrcompositor.exe",
         "vrserver.exe",
         "vrmonitor.exe",
@@ -723,12 +727,79 @@ static const std::unordered_set<std::string> Skip_Processes = {
         "steamwebhelper.exe",
         "steamerrorreporter.exe",
         "steamservice.exe",
-        "ReviveOverlay.exe",
-        "ReviveInjector.exe",
-        "Rundll32.exe",
-        "Rundll64.exe",
-        "fpsVR.exe",
-        "Driver4VR.exe"
+        "rundll32.exe",
+        "rundll64.exe",
+
+        // Existing third-party utilities
+        "reviveoverlay.exe",
+        "reviveinjector.exe",
+        "fpsvr.exe",
+        "driver4vr.exe",
+
+        // PSVR2 SteamVR driver helpers
+        "psvr2_dialog.exe",
+        "psvr2_overlay.exe",
+
+        // HTC / Vive driver helpers
+        "lhrreceiverserver.exe",
+        "rrconsole.exe",
+        "htcconnectionutility.exe",
+        "vivestreamingclient.exe",
+        "vivestreamingserver.exe",
+
+        // Oculus / Meta runtime
+        "ovrserver_x64.exe",
+        "ovrservicelauncher.exe",
+        "ovrredir.exe",
+        "oculusclient.exe",
+        "oculusdash.exe",
+
+        // Pimax
+        "pitool.exe",
+        "piserver.exe",
+        "piservicelauncher.exe",
+        "pvrclient.exe",
+
+        // Varjo
+        "varjobase.exe",
+        "varjocompositor.exe",
+        "varjosession.exe",
+
+        // Windows Mixed Reality
+        "mixedrealityportal.exe",
+        "holoshellapp.exe",
+        "wmrgfxmonitor.exe",
+
+        // ALVR / WiVRn
+        "alvr_dashboard.exe",
+        "alvr.exe",
+        "wivrn.exe",
+
+        // Virtual Desktop
+        "virtualdesktop.streamer.exe",
+        "virtualdesktop.service.exe",
+
+        // Pico (Streaming Assistant / PICO Connect)
+        "streaming assistant.exe",
+        "picovr streaming assistant.exe",
+        "ps_server.exe",
+
+        // Shiftall MeganeX
+        "custom-headset-gui.exe",
+
+        // Always-on overlay apps that connect to SteamVR
+        "liv.exe",
+        "xsoverlay.exe",
+        "ovrtoolkit.exe",
+        "oyasumi.exe",
+        "ovradvancedsettings.exe",
+        "advancedsettings.exe",
+        "openvr-spacecalibrator.exe",
+        "openvr-spacecalibratorex.exe",
+        "bhapticsplayer.exe",
+        "slimevr-server.exe",
+        "vrcfacetracking.exe",
+        "eyetrackvr.exe"
 };
 
 
