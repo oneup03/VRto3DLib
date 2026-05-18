@@ -59,6 +59,7 @@ private:
         {"auto_depth_smoothing", 0.08},
         {"dash_enable", false},
         {"auto_focus", true},
+        {"auto_exit", false},
         {"pitch_enable", false},
         {"yaw_enable", false},
         {"use_open_track", false},

@@ -130,6 +130,7 @@ struct StereoDisplayDriverConfiguration
 
     bool dash_enable         = false;
     bool auto_focus          = true;
+    bool auto_exit           = false;
 
     // Computed at driver activation from the target monitor (display_index).
     // Not read from JSON.
