@@ -18,6 +18,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
@@ -29,6 +30,7 @@
 #include <unordered_set>
 #include <vector>
 #include <windows.h>
+#include <tlhelp32.h>
 #include <XInput.h>
 
 #include "vrto3dlib/debug_log.hpp"
@@ -698,6 +700,154 @@ inline bool IsProcessRunning(DWORD pid) {
 
     CloseHandle(hProcess);
     return isRunning;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Check whether any process with the given exe name is running.
+// `name` is matched case-insensitively against the exe filename only.
+//-----------------------------------------------------------------------------
+inline bool IsProcessNameRunning(const char* name) {
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) return false;
+
+    // Use the W variants unconditionally — modern SDKs only declare the A
+    // variants when UNICODE is undefined, but the W ones always exist.
+    PROCESSENTRY32W entry{};
+    entry.dwSize = sizeof(entry);
+    bool found = false;
+    if (Process32FirstW(snap, &entry)) {
+        do {
+            char exe[MAX_PATH] = {};
+            WideCharToMultiByte(CP_ACP, 0, entry.szExeFile, -1,
+                                exe, MAX_PATH, nullptr, nullptr);
+            if (_stricmp(exe, name) == 0) {
+                found = true;
+                break;
+            }
+        } while (Process32NextW(snap, &entry));
+    }
+    CloseHandle(snap);
+    return found;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Cleanly request SteamVR shut down. `taskkill /IM vrmonitor.exe`
+// (no /F) posts WM_CLOSE — the same graceful path the SteamVR tray's "Exit
+// VR" takes. vrserver follows once its UI host exits. We poll for vrmonitor
+// to actually disappear and only escalate to /F if it overstays the timeout
+// (default 30s).
+//-----------------------------------------------------------------------------
+inline void RequestSteamVRShutdown(int graceful_timeout_seconds = 30) {
+    auto run = [](std::string cmdline, const std::string& tag) {
+        STARTUPINFOA si{};
+        si.cb = sizeof(si);
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_HIDE;
+        PROCESS_INFORMATION pi{};
+        std::vector<char> mut(cmdline.begin(), cmdline.end());
+        mut.push_back('\0');
+        BOOL ok = CreateProcessA(nullptr, mut.data(), nullptr, nullptr,
+                                  FALSE, CREATE_NO_WINDOW, nullptr, nullptr,
+                                  &si, &pi);
+        if (!ok) {
+            LOG() << "auto_exit: " << tag.c_str()
+                  << " CreateProcess failed (err=" << GetLastError() << ")";
+            return;
+        }
+        WaitForSingleObject(pi.hProcess, 10000);
+        DWORD exit_code = 0;
+        GetExitCodeProcess(pi.hProcess, &exit_code);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        LOG() << "auto_exit: " << tag.c_str() << " exit=" << exit_code;
+    };
+
+    run("taskkill /IM vrmonitor.exe", "taskkill vrmonitor");
+
+    const int poll_ms = 500;
+    const int max_polls = (graceful_timeout_seconds * 1000) / poll_ms;
+    for (int i = 0; i < max_polls; ++i) {
+        if (!IsProcessNameRunning("vrmonitor.exe")) {
+            LOG() << "auto_exit: vrmonitor exited cleanly after "
+                  << (i * poll_ms) << "ms";
+            return;
+        }
+        Sleep(poll_ms);
+    }
+
+    LOG() << "auto_exit: vrmonitor still running after "
+          << graceful_timeout_seconds << "s, escalating to /F";
+    run("taskkill /F /IM vrmonitor.exe", "taskkill /F vrmonitor");
+}
+
+
+//-----------------------------------------------------------------------------
+// Published by device_provider on ProcessConnected/Disconnected so any other
+// TU (present-window WndProc, WibbleWobble subclass) can ask the currently
+// attached app to close before triggering a SteamVR shutdown. 0 = nothing
+// connected.
+//-----------------------------------------------------------------------------
+inline std::atomic<uint32_t> g_current_app_pid{0};
+
+
+//-----------------------------------------------------------------------------
+// Purpose: User-initiated close (Alt+F4 / X-button) of one of our windows.
+// If an app is currently connected, post WM_CLOSE to its main window first
+// so SteamVR doesn't show the "an application is using SteamVR, are you
+// sure?" prompt, then wait for the process to exit before tearing SteamVR
+// down (mirrors the auto_exit path). With no app connected, shuts SteamVR
+// down immediately.
+//-----------------------------------------------------------------------------
+inline void RequestSteamVRShutdownWithApp(
+    uint32_t pid,
+    int app_close_timeout_seconds = 30)
+{
+    if (pid == 0 || !IsProcessRunning(pid)) {
+        RequestSteamVRShutdown();
+        return;
+    }
+
+    HWND game = GetHWNDFromPID(pid);
+    if (game) {
+        LOG() << "auto_exit: posting WM_CLOSE to pid " << pid
+              << " hwnd=0x" << std::hex
+              << reinterpret_cast<uintptr_t>(game) << std::dec;
+        PostMessageW(game, WM_CLOSE, 0, 0);
+    } else {
+        LOG() << "auto_exit: no top-level window for pid " << pid
+              << ", skipping graceful WM_CLOSE";
+    }
+
+    const int poll_ms = 500;
+    const int max_polls = (app_close_timeout_seconds * 1000) / poll_ms;
+    for (int i = 0; i < max_polls; ++i) {
+        if (!IsProcessRunning(pid)) {
+            LOG() << "auto_exit: pid " << pid << " exited after "
+                  << (i * poll_ms) << "ms, shutting down SteamVR";
+            RequestSteamVRShutdown();
+            return;
+        }
+        Sleep(poll_ms);
+    }
+
+    // Game refused to close (declined a Save prompt, hung, etc.) — force
+    // it. The user already asked to exit via our window, so we honor that
+    // gesture rather than leaving SteamVR up.
+    LOG() << "auto_exit: pid " << pid << " still running after "
+          << app_close_timeout_seconds << "s, terminating";
+    if (HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, pid)) {
+        if (!TerminateProcess(h, 1)) {
+            LOG() << "auto_exit: TerminateProcess failed (err="
+                  << GetLastError() << ")";
+        }
+        CloseHandle(h);
+    } else {
+        LOG() << "auto_exit: OpenProcess(PROCESS_TERMINATE) failed (err="
+              << GetLastError() << ")";
+    }
+    RequestSteamVRShutdown();
 }
 
 
