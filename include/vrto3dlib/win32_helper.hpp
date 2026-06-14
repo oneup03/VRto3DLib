@@ -741,7 +741,7 @@ inline bool IsProcessNameRunning(const char* name) {
 // still around after that, send it the same graceful-then-/F sequence so
 // the VR display actually goes away.
 //-----------------------------------------------------------------------------
-inline void RequestSteamVRShutdown(int graceful_timeout_seconds = 30) {
+inline void RequestSteamVRShutdown(int graceful_timeout_seconds = 5) {
     auto run = [](std::string cmdline, const std::string& tag) {
         STARTUPINFOA si{};
         si.cb = sizeof(si);
