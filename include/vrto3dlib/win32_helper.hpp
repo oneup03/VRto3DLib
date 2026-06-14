@@ -735,9 +735,11 @@ inline bool IsProcessNameRunning(const char* name) {
 //-----------------------------------------------------------------------------
 // Purpose: Cleanly request SteamVR shut down. `taskkill /IM vrmonitor.exe`
 // (no /F) posts WM_CLOSE — the same graceful path the SteamVR tray's "Exit
-// VR" takes. vrserver follows once its UI host exits. We poll for vrmonitor
-// to actually disappear and only escalate to /F if it overstays the timeout
-// (default 30s).
+// VR" takes. vrserver is supposed to follow once its UI host exits, but on
+// some setups it lingers (extra OpenVR clients still attached, etc.) and
+// leaves the headset display up. We poll vrmonitor first; if vrserver is
+// still around after that, send it the same graceful-then-/F sequence so
+// the VR display actually goes away.
 //-----------------------------------------------------------------------------
 inline void RequestSteamVRShutdown(int graceful_timeout_seconds = 30) {
     auto run = [](std::string cmdline, const std::string& tag) {
@@ -764,22 +766,40 @@ inline void RequestSteamVRShutdown(int graceful_timeout_seconds = 30) {
         LOG() << "auto_exit: " << tag.c_str() << " exit=" << exit_code;
     };
 
-    run("taskkill /IM vrmonitor.exe", "taskkill vrmonitor");
-
     const int poll_ms = 500;
-    const int max_polls = (graceful_timeout_seconds * 1000) / poll_ms;
-    for (int i = 0; i < max_polls; ++i) {
-        if (!IsProcessNameRunning("vrmonitor.exe")) {
-            LOG() << "auto_exit: vrmonitor exited cleanly after "
-                  << (i * poll_ms) << "ms";
-            return;
-        }
-        Sleep(poll_ms);
-    }
 
-    LOG() << "auto_exit: vrmonitor still running after "
-          << graceful_timeout_seconds << "s, escalating to /F";
-    run("taskkill /F /IM vrmonitor.exe", "taskkill /F vrmonitor");
+    auto kill_named = [&](const char* image_name) {
+        std::string graceful = std::string("taskkill /IM ") + image_name;
+        std::string graceful_tag = std::string("taskkill ") + image_name;
+        run(graceful, graceful_tag);
+
+        const int max_polls = (graceful_timeout_seconds * 1000) / poll_ms;
+        for (int i = 0; i < max_polls; ++i) {
+            if (!IsProcessNameRunning(image_name)) {
+                LOG() << "auto_exit: " << image_name
+                      << " exited cleanly after " << (i * poll_ms) << "ms";
+                return;
+            }
+            Sleep(poll_ms);
+        }
+
+        LOG() << "auto_exit: " << image_name << " still running after "
+              << graceful_timeout_seconds << "s, escalating to /F";
+        std::string forced = std::string("taskkill /F /IM ") + image_name;
+        std::string forced_tag = std::string("taskkill /F ") + image_name;
+        run(forced, forced_tag);
+    };
+
+    kill_named("vrmonitor.exe");
+
+    // vrserver should self-terminate once vrmonitor is gone, but on some
+    // setups it doesn't — leaving the headset display alive. Only follow up
+    // if it's still around.
+    if (IsProcessNameRunning("vrserver.exe")) {
+        LOG() << "auto_exit: vrserver still running after vrmonitor exit, "
+                 "closing it directly";
+        kill_named("vrserver.exe");
+    }
 }
 
 
