@@ -90,6 +90,14 @@ private:
         {"pitch_radius", 0.0},
         {"ctrl_deadzone", 0.05},
         {"ctrl_sensitivity", 1.0},
+        {"shader_enabled", false},
+        {"shader_lift",  {1.0, 1.0, 1.0}},
+        {"shader_gamma", {1.0, 1.0, 1.0}},
+        {"shader_gain",  {1.0, 1.0, 1.0}},
+        {"shader_curve", 1.0},
+        {"shader_curve_offset_low",  0.0},
+        {"shader_curve_offset_high", 0.0},
+        {"shader_curve_offset_both", 0.0},
         {"user_settings", {
             {
                 {"user_load_key", "VK_NUMPAD1"},

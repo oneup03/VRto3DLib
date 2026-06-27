@@ -439,6 +439,35 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
             config.auto_depth_smoothing = getValue<float>(jsonConfig, "auto_depth_smoothing");
         }
 
+        // Display-correction shader pass — all keys guarded so older profiles
+        // without them still load cleanly with pass-through defaults.
+        if (jsonConfig.contains("shader_enabled")) {
+            config.shader_enabled = getValue<bool>(jsonConfig, "shader_enabled");
+        }
+        auto loadShaderTriplet = [&](const char* key, float (&dst)[3]) {
+            if (jsonConfig.contains(key) && jsonConfig[key].is_array()
+                && jsonConfig[key].size() >= 3) {
+                dst[0] = jsonConfig[key][0].get<float>();
+                dst[1] = jsonConfig[key][1].get<float>();
+                dst[2] = jsonConfig[key][2].get<float>();
+            }
+        };
+        loadShaderTriplet("shader_lift",  config.shader_lift);
+        loadShaderTriplet("shader_gamma", config.shader_gamma);
+        loadShaderTriplet("shader_gain",  config.shader_gain);
+        if (jsonConfig.contains("shader_curve")) {
+            config.shader_curve = getValue<float>(jsonConfig, "shader_curve");
+        }
+        if (jsonConfig.contains("shader_curve_offset_low")) {
+            config.shader_curve_off_low = getValue<float>(jsonConfig, "shader_curve_offset_low");
+        }
+        if (jsonConfig.contains("shader_curve_offset_high")) {
+            config.shader_curve_off_high = getValue<float>(jsonConfig, "shader_curve_offset_high");
+        }
+        if (jsonConfig.contains("shader_curve_offset_both")) {
+            config.shader_curve_off_both = getValue<float>(jsonConfig, "shader_curve_offset_both");
+        }
+
         // Controller settings
         config.pitch_enable = getValue<bool>(jsonConfig, "pitch_enable");
         config.pitch_set = config.pitch_enable;
@@ -593,6 +622,14 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
     jsonConfig["auto_depth_enabled"] = config.auto_depth_enabled;
     jsonConfig["auto_depth_target_disparity"] = config.auto_depth_target_disparity;
     jsonConfig["auto_depth_smoothing"] = config.auto_depth_smoothing;
+    jsonConfig["shader_enabled"] = config.shader_enabled;
+    jsonConfig["shader_lift"]  = { config.shader_lift[0],  config.shader_lift[1],  config.shader_lift[2]  };
+    jsonConfig["shader_gamma"] = { config.shader_gamma[0], config.shader_gamma[1], config.shader_gamma[2] };
+    jsonConfig["shader_gain"]  = { config.shader_gain[0],  config.shader_gain[1],  config.shader_gain[2]  };
+    jsonConfig["shader_curve"] = config.shader_curve;
+    jsonConfig["shader_curve_offset_low"]  = config.shader_curve_off_low;
+    jsonConfig["shader_curve_offset_high"] = config.shader_curve_off_high;
+    jsonConfig["shader_curve_offset_both"] = config.shader_curve_off_both;
     jsonConfig["pitch_enable"] = config.pitch_enable;
     jsonConfig["yaw_enable"] = config.yaw_enable;
     jsonConfig["pose_reset_key"] = config.pose_reset_str;
@@ -662,6 +699,16 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
     j["auto_depth_enabled"]          = config.auto_depth_enabled;
     j["auto_depth_target_disparity"] = config.auto_depth_target_disparity;
     j["auto_depth_smoothing"]        = config.auto_depth_smoothing;
+
+    // Display-correction shader pass
+    j["shader_enabled"]              = config.shader_enabled;
+    j["shader_lift"]                 = { config.shader_lift[0],  config.shader_lift[1],  config.shader_lift[2]  };
+    j["shader_gamma"]                = { config.shader_gamma[0], config.shader_gamma[1], config.shader_gamma[2] };
+    j["shader_gain"]                 = { config.shader_gain[0],  config.shader_gain[1],  config.shader_gain[2]  };
+    j["shader_curve"]                = config.shader_curve;
+    j["shader_curve_offset_low"]     = config.shader_curve_off_low;
+    j["shader_curve_offset_high"]    = config.shader_curve_off_high;
+    j["shader_curve_offset_both"]    = config.shader_curve_off_both;
 
     // Misc / system
     j["disable_hotkeys"] = config.disable_hotkeys;

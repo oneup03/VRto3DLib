@@ -142,6 +142,20 @@ struct StereoDisplayDriverConfiguration
     bool hide_cursor         = false;
     bool lock_cursor         = false;
 
+    // Display-correction shader pass — applied to the final composited SbS
+    // texture (post-OSD, pre-presenter) to reduce visible crosstalk on
+    // displays that suffer from it (e.g. some passive row-interlaced 3D
+    // monitors). All defaults are pass-through; the pass is skipped entirely
+    // unless `shader_enabled` is true.
+    bool  shader_enabled            = false;
+    float shader_lift[3]            = {1.0f, 1.0f, 1.0f};   // RGB shadows
+    float shader_gamma[3]           = {1.0f, 1.0f, 1.0f};   // RGB midtones
+    float shader_gain[3]            = {1.0f, 1.0f, 1.0f};   // RGB highlights
+    float shader_curve              = 1.0f;                  // 0.33..3.0; 1.0 = pass-through
+    float shader_curve_off_low      = 0.0f;
+    float shader_curve_off_high     = 0.0f;
+    float shader_curve_off_both     = 0.0f;
+
     // Computed at driver activation from the target monitor (display_index).
     // Not read from JSON.
     float display_latency    = 0.011f;
