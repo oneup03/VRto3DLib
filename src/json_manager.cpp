@@ -350,6 +350,8 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.dash_enable = getValue<bool>(jsonConfig, "dash_enable");
         config.auto_focus = getValue<bool>(jsonConfig, "auto_focus");
         config.auto_exit = getValue<bool>(jsonConfig, "auto_exit");
+        config.hide_cursor = getValue<bool>(jsonConfig, "hide_cursor");
+        config.lock_cursor = getValue<bool>(jsonConfig, "lock_cursor");
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");
         config.open_track_port = getValue<int>(jsonConfig, "open_track_port");
         config.use_track_filter = getValue<bool>(jsonConfig, "use_track_filter");
@@ -666,6 +668,8 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
     j["dash_enable"]     = config.dash_enable;
     j["auto_focus"]      = config.auto_focus;
     j["auto_exit"]       = config.auto_exit;
+    j["hide_cursor"]     = config.hide_cursor;
+    j["lock_cursor"]     = config.lock_cursor;
 
     // Controller / tracking inputs
     j["pitch_enable"]    = config.pitch_enable;

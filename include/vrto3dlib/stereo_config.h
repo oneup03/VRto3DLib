@@ -131,6 +131,16 @@ struct StereoDisplayDriverConfiguration
     bool dash_enable         = false;
     bool auto_focus          = true;
     bool auto_exit           = false;
+    // Cross-process cursor control over the connected game's window. Polled
+    // from MockControllerDeviceDriver::CursorControlThread while the game is
+    // foreground.
+    //   hide_cursor: SetCursor(NULL) on the game's input queue each tick to
+    //     hide the OS cursor over the game window (for games that don't
+    //     manage cursor visibility themselves under windowed mode).
+    //   lock_cursor: ClipCursor to the game window's rect each tick to
+    //     emulate the FSE-style mouse confinement under windowed mode.
+    bool hide_cursor         = false;
+    bool lock_cursor         = false;
 
     // Computed at driver activation from the target monitor (display_index).
     // Not read from JSON.
