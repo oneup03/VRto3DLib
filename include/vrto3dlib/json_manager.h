@@ -84,8 +84,8 @@ private:
         {"sr_max_roll", 70.0},
         {"sr_track_mode", "XYZ_YawPitch"},
         {"launch_script", ""},
-        {"pose_reset_key", "VK_NUMPAD7"},
-        {"ctrl_toggle_key", "VK_NUMPAD8"},
+        {"pose_reset_key", "Numpad7"},
+        {"ctrl_toggle_key", "Numpad8"},
         {"ctrl_toggle_type", "toggle"},
         {"pitch_radius", 0.0},
         {"ctrl_deadzone", 0.05},
@@ -100,19 +100,19 @@ private:
         {"shader_curve_offset_both", 0.0},
         {"user_settings", {
             {
-                {"user_load_key", "VK_NUMPAD1"},
+                {"user_load_key", "Numpad1"},
                 {"user_key_type", "switch"},
                 {"user_depth", 0.1},
                 {"user_convergence", 1.0}
             },
             {
-                {"user_load_key", "XINPUT_GAMEPAD_GUIDE"},
+                {"user_load_key", "Pad_Guide"},
                 {"user_key_type", "toggle"},
                 {"user_depth", 0.065},
                 {"user_convergence", 1.0}
             },
             {
-                {"user_load_key", "VK_NUMPAD3"},
+                {"user_load_key", "Numpad3"},
                 {"user_key_type", "hold"},
                 {"user_depth", 0.065},
                 {"user_convergence", 1.0},
