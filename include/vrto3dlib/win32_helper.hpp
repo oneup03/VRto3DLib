@@ -35,6 +35,7 @@
 
 #include "vrto3dlib/debug_log.hpp"
 #include "vrto3dlib/key_mappings.h"
+#include "vrto3dlib/hotkey_eval.hpp"
 #include "vrto3dlib/stereo_config.h"
 
 
@@ -457,21 +458,11 @@ inline bool ApplyDisplaySelectionToWindowConfig(StereoDisplayDriverConfiguration
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Check and apply user settings hotkeys
+// Purpose: Check and apply user settings hotkeys. The evaluator itself is
+// platform-neutral (vrto3dlib/hotkey_eval.hpp, shared with linux_helper.hpp);
+// this wrapper only supplies the Win32 key-state query (GetAsyncKeyState).
 //-----------------------------------------------------------------------------
-struct DepthConvBackend
-{
-    float (*getDepth)(void* ctx);
-    float (*getConv)(void* ctx);
-    void  (*setDepth)(void* ctx, float v);
-    void  (*setConv)(void* ctx, float v);
-    float (*getFov)(void* ctx);
-    void  (*setFov)(void* ctx, float v);
-
-    void (*onApplied)(void* ctx) = nullptr; // optional (e.g. mark dirty)
-    void* ctx = nullptr;
-};
-
+using vrto3d::DepthConvBackend;
 
 inline std::string ApplyUserSettingsHotkeys(
     StereoDisplayDriverConfiguration& cfg,
@@ -480,122 +471,9 @@ inline std::string ApplyUserSettingsHotkeys(
     const DepthConvBackend& b,
     float maxDelta = 0.001f)
 {
-    std::string storeMsg;
-
-    auto applied = [&]() {
-        if (b.onApplied) b.onApplied(b.ctx);
-    };
-
-    for (size_t i = 0; i < cfg.num_user_settings; ++i)
-    {
-        if (cfg.sleep_count[i] > 0)
-            cfg.sleep_count[i]--;
-
-        if (cfg.user_depth[i].empty()) continue;  // malformed row, skip
-
-        // Bounds-clamp the cycle index in case the preset list shrunk.
-        if (i >= cfg.user_preset_index.size()) cfg.user_preset_index.resize(i + 1, 0);
-        if (cfg.user_preset_index[i] >= cfg.user_depth[i].size())
-            cfg.user_preset_index[i] = 0;
-
-        const size_t presets = cfg.user_depth[i].size();
-        size_t idx = cfg.user_preset_index[i];
-
-        // HOLD ignores cycling — it just toggles preset[0] in/out.
-        const size_t hold_idx = 0;
-
-        // Helpers to fetch a preset's values; tolerates short conv/fov vectors.
-        auto getD = [&](size_t k) { return cfg.user_depth[i][k]; };
-        auto getC = [&](size_t k) {
-            return k < cfg.user_convergence[i].size()
-                 ? cfg.user_convergence[i][k]
-                 : (cfg.user_convergence[i].empty() ? 1.0f : cfg.user_convergence[i].back());
-        };
-        auto getF = [&](size_t k) {
-            float f = k < cfg.user_fov[i].size()
-                    ? cfg.user_fov[i][k]
-                    : (cfg.user_fov[i].empty() ? 0.0f : cfg.user_fov[i].back());
-            // FoV == 0 in the user-hotkey row is the documented sentinel for
-            // "don't override — keep the active profile FoV". Falls back to
-            // the live cfg.fov so the press doesn't snap the FoV to zero.
-            if (f <= 0.0f) f = cfg.fov;
-            return f;
-        };
-        auto applyPreset = [&](size_t k) {
-            b.setDepth(b.ctx, getD(k));
-            b.setConv(b.ctx,  getC(k));
-            b.setFov(b.ctx,   getF(k));
-            applied();
-        };
-
-        const bool loadPressed =
-            (cfg.load_xinput[i] && got_xinput &&
-                ((xstate & static_cast<DWORD>(cfg.user_load_key[i])) ==
-                    static_cast<DWORD>(cfg.user_load_key[i])))
-            || (!cfg.load_xinput[i] && isDown(cfg.user_load_key[i]));
-
-        if (loadPressed)
-        {
-            const int32_t kt = cfg.user_key_type[i];
-
-            if (kt == HOLD && !cfg.was_held[i])
-            {
-                cfg.prev_depth[i] = b.getDepth(b.ctx);
-                cfg.prev_convergence[i] = b.getConv(b.ctx);
-                cfg.prev_fov[i] = b.getFov(b.ctx);
-                cfg.was_held[i] = true;
-                applyPreset(hold_idx);
-            }
-            else if (kt == TOGGLE && cfg.sleep_count[i] < 1)
-            {
-                cfg.sleep_count[i] = cfg.sleep_count_max;
-
-                const float curD = b.getDepth(b.ctx);
-                const float curC = b.getConv(b.ctx);
-                const float curF = b.getFov(b.ctx);
-
-                // If we currently match this preset, advance to the next; if
-                // we cycle back to where we started, revert to prev.
-                const bool matches =
-                    NearlyEqual(curD, getD(idx), maxDelta) &&
-                    NearlyEqual(curC, getC(idx), maxDelta) &&
-                    NearlyEqual(curF, getF(idx), maxDelta);
-
-                if (matches && presets > 1) {
-                    idx = (idx + 1) % presets;
-                    cfg.user_preset_index[i] = idx;
-                    applyPreset(idx);
-                } else if (matches) {
-                    b.setDepth(b.ctx, cfg.prev_depth[i]);
-                    b.setConv(b.ctx,  cfg.prev_convergence[i]);
-                    b.setFov(b.ctx,   cfg.prev_fov[i]);
-                    applied();
-                } else {
-                    cfg.prev_depth[i] = curD;
-                    cfg.prev_convergence[i] = curC;
-                    cfg.prev_fov[i] = curF;
-                    applyPreset(idx);
-                }
-            }
-            else if (kt == SWITCH && cfg.sleep_count[i] < 1)
-            {
-                cfg.sleep_count[i] = cfg.sleep_count_max;
-                applyPreset(idx);
-                cfg.user_preset_index[i] = (idx + 1) % presets;
-            }
-        }
-        else if (cfg.user_key_type[i] == HOLD && cfg.was_held[i])
-        {
-            cfg.was_held[i] = false;
-
-            b.setDepth(b.ctx, cfg.prev_depth[i]);
-            b.setConv(b.ctx, cfg.prev_convergence[i]);
-            b.setFov(b.ctx, cfg.prev_fov[i]);
-            applied();
-        }
-    }
-
-    return storeMsg;
+    return vrto3d::ApplyUserSettingsHotkeysImpl(
+        cfg, got_xinput, static_cast<uint32_t>(xstate), b,
+        [](int vk) { return isDown(vk) != 0; }, maxDelta);
 }
 
 
