@@ -35,6 +35,7 @@
 #include <vector>
 
 #include <dirent.h>
+#include <limits.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -186,7 +187,7 @@ inline bool IsProcessNameRunning(const char* name)
     while (dirent* e = readdir(dir)) {
         if (e->d_name[0] < '0' || e->d_name[0] > '9')
             continue;
-        char path[64];
+        char path[NAME_MAX + 16];
         snprintf(path, sizeof(path), "/proc/%s/comm", e->d_name);
         std::ifstream f(path);
         std::string comm;
@@ -209,7 +210,7 @@ inline void KillProcessesNamed(const char* comm_name, int sig)
     while (dirent* e = readdir(dir)) {
         if (e->d_name[0] < '0' || e->d_name[0] > '9')
             continue;
-        char path[64];
+        char path[NAME_MAX + 16];
         snprintf(path, sizeof(path), "/proc/%s/comm", e->d_name);
         std::ifstream f(path);
         std::string comm;
