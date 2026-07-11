@@ -16,13 +16,17 @@
  */
 
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <fstream>
 #include <regex>
 
 #include "vrto3dlib/app_id_mgr.h"
 #include "vrto3dlib/debug_log.hpp"
+#ifdef _WIN32
+#include <windows.h>
 #include "vrto3dlib/win32_helper.hpp"
+#else
+#include "vrto3dlib/linux_helper.hpp"
+#endif
 
 AppIdMgr::AppIdMgr() {
     steam_path_ = GetSteamInstallPath();
@@ -38,7 +42,7 @@ std::vector<std::string> AppIdMgr::GetSteamAppIDs() {
         return {};
     }
 
-    std::string logFilePath = steam_path_ + "\\logs\\vrserver.txt";
+    std::string logFilePath = steam_path_ + "/logs/vrserver.txt";
     std::ifstream logFile(logFilePath);
     if (!logFile) {
         LOG() << "Failed to open log file: " << logFilePath;

@@ -18,11 +18,17 @@
 #define WIN32_LEAN_AND_MEAN
 #include "vrto3dlib/json_manager.h"
 #include "vrto3dlib/debug_log.hpp"
+#ifdef _WIN32
 #include "vrto3dlib/key_mappings.h"
 #include "vrto3dlib/win32_helper.hpp"
 
 #include <windows.h>
 #include <shlobj.h>
+#else
+#include "vrto3dlib/key_codes.h"
+#include "vrto3dlib/linux_helper.hpp"
+#endif
+#include "vrto3dlib/key_names.h"
 #include <fstream>
 #include <filesystem>
 #include <unordered_map>
@@ -138,11 +144,68 @@ const FramePackTimingSpec* GetFramePackTimingSpec(OutputMode m)
 }
 
 
+#ifndef _WIN32
+// key_mappings.h is Windows-only; mirror the bind-type map here.
+static std::unordered_map<std::string, int> KeyBindTypes = {
+    {"switch", SWITCH}, {"toggle", TOGGLE}, {"hold", HOLD}
+};
+#endif
+
+//-----------------------------------------------------------------------------
+// Purpose: Parse a keybind name into a key code / gamepad bitmask. Accepts the
+// portable vocabulary ("Key_A", "Numpad7", "Pad_A", "Pad_Start+Pad_DPadDown")
+// and, for migration, the legacy VK_*/XINPUT_* spellings. The *_str fields
+// keep whatever canonical (portable) spelling MigrateName produces, so the
+// next profile save rewrites legacy names in place.
+//-----------------------------------------------------------------------------
+static bool ParseBindName(std::string& name, int32_t& code, bool& xinput)
+{
+    code = 0;
+    xinput = false;
+    if (name.empty())
+        return false;
+
+    auto split_tokens = [](const std::string& s) {
+        std::vector<std::string> out;
+        std::stringstream ss(s);
+        std::string tok;
+        while (std::getline(ss, tok, '+'))
+            out.push_back(tok);
+        return out;
+    };
+
+    const int key = vrto3d::keys::KeyCodeFromName(name);
+    if (key >= 0) {
+        code = key;
+        xinput = false;
+        name = vrto3d::keys::MigrateName(name);
+        return true;
+    }
+    if (vrto3d::keys::PadBitsFromName(name) >= 0 || name.find('+') != std::string::npos) {
+        std::string migrated;
+        for (const auto& tok : split_tokens(name)) {
+            const int bits = vrto3d::keys::PadBitsFromName(tok);
+            if (bits >= 0) {
+                code |= bits;
+                if (!migrated.empty()) migrated += '+';
+                migrated += vrto3d::keys::MigrateName(tok);
+            }
+        }
+        if (code != 0) {
+            xinput = true;
+            name = migrated;
+            return true;
+        }
+    }
+    LOG() << "Unknown keybind name: " << name.c_str();
+    return false;
+}
+
 JsonManager::JsonManager() {
     vrto3dFolder = GetSteamInstallPath();
     if (vrto3dFolder != "")
     {
-        vrto3dFolder += "\\config\\vrto3d";
+        vrto3dFolder += "/config/vrto3d";
         createFolderIfNotExist(vrto3dFolder);
     }
 }
@@ -162,7 +225,7 @@ void JsonManager::createFolderIfNotExist(const std::string& path) {
 // Purpose: Write a JSON to Steam/config/vrto3d
 //-----------------------------------------------------------------------------
 void JsonManager::writeJsonToFile(const std::string& fileName, const nlohmann::ordered_json& jsonData) {
-    std::string filePath = vrto3dFolder + "\\" + fileName;
+    std::string filePath = vrto3dFolder + "/" + fileName;
     std::ofstream file(filePath);
     if (file.is_open()) {
         file << jsonData.dump(4); // Pretty-print the JSON with an indent of 4 spaces
@@ -182,7 +245,7 @@ void JsonManager::writeJsonToFile(const std::string& fileName, const nlohmann::o
 //          per-profile Load returns false).
 //-----------------------------------------------------------------------------
 nlohmann::json JsonManager::readJsonFromFile(const std::string& fileName) {
-    std::string filePath = vrto3dFolder + "\\" + fileName;
+    std::string filePath = vrto3dFolder + "/" + fileName;
     std::ifstream file(filePath);
     if (!file.is_open()) {
         return {};
@@ -257,7 +320,7 @@ std::vector<std::string> JsonManager::split(const std::string& str, char delimit
 void JsonManager::EnsureDefaultConfigExists()
 {
     auto writeDefaults = [&](const char* reason) {
-        std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
+        std::string filePath = vrto3dFolder + "/" + DEF_CFG;
         LOG() << DEF_CFG << ": " << reason << " — writing fresh defaults";
         std::ofstream file(filePath);
         if (file.is_open()) {
@@ -269,7 +332,7 @@ void JsonManager::EnsureDefaultConfigExists()
         }
     };
 
-    std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
+    std::string filePath = vrto3dFolder + "/" + DEF_CFG;
     if (!std::filesystem::exists(filePath)) {
         writeDefaults("does not exist");
         return;
@@ -324,7 +387,7 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         if (jsonConfig.is_null() || !jsonConfig.is_object() || jsonConfig.empty()) {
             LOG() << "LoadParamsFromJson: " << DEF_CFG
                   << " missing/empty/corrupt — regenerating from defaults";
-            std::string filePath = vrto3dFolder + "\\" + DEF_CFG;
+            std::string filePath = vrto3dFolder + "/" + DEF_CFG;
             std::ofstream file(filePath);
             if (file.is_open()) {
                 file << default_config_.dump(4);
@@ -475,38 +538,11 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         config.yaw_set = config.yaw_enable;
 
         config.pose_reset_str = getValue<std::string>(jsonConfig, "pose_reset_key");
-        
-        if (VirtualKeyMappings.find(config.pose_reset_str) != VirtualKeyMappings.end()) {
-            config.pose_reset_key = VirtualKeyMappings[config.pose_reset_str];
-            config.reset_xinput = false;
-        }
-        else if (XInputMappings.find(config.pose_reset_str) != XInputMappings.end() || config.pose_reset_str.find('+') != std::string::npos) {
-            config.pose_reset_key = 0x0;
-            auto hotkeys = split(config.pose_reset_str, '+');
-            for (const auto& hotkey : hotkeys) {
-                if (XInputMappings.find(hotkey) != XInputMappings.end()) {
-                    config.pose_reset_key |= XInputMappings[hotkey];
-                }
-            }
-            config.reset_xinput = true;
-        }
+        ParseBindName(config.pose_reset_str, config.pose_reset_key, config.reset_xinput);
         config.pose_reset = true;
 
         config.ctrl_toggle_str = getValue<std::string>(jsonConfig, "ctrl_toggle_key");
-        if (VirtualKeyMappings.find(config.ctrl_toggle_str) != VirtualKeyMappings.end()) {
-            config.ctrl_toggle_key = VirtualKeyMappings[config.ctrl_toggle_str];
-            config.ctrl_xinput = false;
-        }
-        else if (XInputMappings.find(config.ctrl_toggle_str) != XInputMappings.end() || config.ctrl_toggle_str.find('+') != std::string::npos) {
-            config.ctrl_toggle_key = 0x0;
-            auto hotkeys = split(config.ctrl_toggle_str, '+');
-            for (const auto& hotkey : hotkeys) {
-                if (XInputMappings.find(hotkey) != XInputMappings.end()) {
-                    config.ctrl_toggle_key |= XInputMappings[hotkey];
-                }
-            }
-            config.ctrl_xinput = true;
-        }
+        ParseBindName(config.ctrl_toggle_str, config.ctrl_toggle_key, config.ctrl_xinput);
 
         config.ctrl_type_str = getValue<std::string>(jsonConfig, "ctrl_toggle_type");
         config.ctrl_type = KeyBindTypes[config.ctrl_type_str];
@@ -543,19 +579,10 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
             const auto& user_setting = user_settings_array.at(i);
 
             config.user_load_str[i] = user_setting.at("user_load_key").get<std::string>();
-            if (VirtualKeyMappings.find(config.user_load_str[i]) != VirtualKeyMappings.end()) {
-                config.user_load_key[i] = VirtualKeyMappings[config.user_load_str[i]];
-                config.load_xinput[i] = false;
-            }
-            else if (XInputMappings.find(config.user_load_str[i]) != XInputMappings.end() || config.user_load_str[i].find('+') != std::string::npos) {
-                config.user_load_key[i] = 0x0;
-                auto hotkeys = split(config.user_load_str[i], '+');
-                for (const auto& hotkey : hotkeys) {
-                    if (XInputMappings.find(hotkey) != XInputMappings.end()) {
-                        config.user_load_key[i] |= XInputMappings[hotkey];
-                    }
-                }
-                config.load_xinput[i] = true;
+            {
+                bool row_xinput = false;
+                ParseBindName(config.user_load_str[i], config.user_load_key[i], row_xinput);
+                config.load_xinput[i] = row_xinput;
             }
 
             config.user_type_str[i] = user_setting.at("user_key_type").get<std::string>();

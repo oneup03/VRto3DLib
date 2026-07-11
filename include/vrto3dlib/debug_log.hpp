@@ -19,9 +19,143 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <cstdio>
+#endif
 
 std::string GetSteamInstallPath();
+
+#ifndef _WIN32
+
+// Linux DebugLog: same LOG() interface as the Windows version below, minus
+// the wide-string plumbing. Rotation coordination across multiple .so loads
+// in one process uses a pid-stamped marker file instead of a named mutex.
+class DebugLog {
+public:
+    DebugLog() = default;
+
+    static void SetLogName(const std::string& stem) {
+        ConfiguredStem() = stem;
+        GetFileState(true);
+    }
+
+    ~DebugLog() { flush(); }
+
+    template<typename T>
+    DebugLog& operator<<(const T& v) {
+        stream_ << v;
+        return *this;
+    }
+
+private:
+    struct FileState {
+        bool enabled = false;
+        std::string current_log_path;
+    };
+
+    struct FileInitScope {
+        FileInitScope() { InProgress() = true; }
+        ~FileInitScope() { InProgress() = false; }
+        static bool& InProgress() {
+            static thread_local bool in_progress = false;
+            return in_progress;
+        }
+    };
+
+    static std::string& ConfiguredStem() {
+        static std::string stem = "vrto3d";
+        return stem;
+    }
+
+    static FileState InitializeFileState() {
+        FileInitScope init_scope;
+        FileState state;
+
+        const std::string steam_path = GetSteamInstallPath();
+        if (steam_path.empty()) {
+            return state;
+        }
+        const std::string logs_dir = steam_path + "/logs";
+        struct stat st{};
+        if (stat(logs_dir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
+            return state;
+        }
+
+        const std::string& stem = ConfiguredStem();
+        const std::string current_log_path  = logs_dir + "/" + stem + ".txt";
+        const std::string previous_log_path = logs_dir + "/" + stem + "_previous.txt";
+        const std::string marker_path       = logs_dir + "/." + stem + ".rotated";
+
+        // First loader in this process rotates; later .so loads (marker holds
+        // our pid) just append.
+        bool first_in_process = true;
+        if (FILE* m = fopen(marker_path.c_str(), "r")) {
+            long pid = 0;
+            if (fscanf(m, "%ld", &pid) == 1 && pid == (long)getpid())
+                first_in_process = false;
+            fclose(m);
+        }
+        if (first_in_process) {
+            ::remove(previous_log_path.c_str());
+            ::rename(current_log_path.c_str(), previous_log_path.c_str());
+            if (FILE* m = fopen(marker_path.c_str(), "w")) {
+                fprintf(m, "%ld", (long)getpid());
+                fclose(m);
+            }
+        }
+
+        const auto open_mode = first_in_process
+            ? (std::ios::out | std::ios::trunc | std::ios::binary)
+            : (std::ios::out | std::ios::app   | std::ios::binary);
+        std::ofstream new_log(current_log_path, open_mode);
+        if (!new_log.is_open()) {
+            return state;
+        }
+
+        state.enabled = true;
+        state.current_log_path = current_log_path;
+        return state;
+    }
+
+    static FileState& GetFileState(bool reset = false) {
+        static FileState state;
+        static bool initialized = false;
+        if (reset || !initialized) {
+            state = InitializeFileState();
+            initialized = true;
+        }
+        return state;
+    }
+
+    void flush() {
+        if (stream_.tellp() == 0)
+            return;
+        stream_ << '\n';
+        const std::string message = stream_.str();
+        fputs(message.c_str(), stderr);
+        if (FileInitScope::InProgress())
+            return;
+        const FileState& state = GetFileState();
+        if (!state.enabled || state.current_log_path.empty())
+            return;
+        std::ofstream log_file(state.current_log_path,
+                               std::ios::out | std::ios::app | std::ios::binary);
+        if (log_file.is_open())
+            log_file << message;
+    }
+
+    std::stringstream stream_;
+};
+
+#define LOG() DebugLog()
+
+#else  // _WIN32
 
 class DebugLog {
 public:
@@ -213,3 +347,5 @@ private:
 };
 
 #define LOG() DebugLog()
+
+#endif  // _WIN32

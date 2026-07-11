@@ -16,12 +16,30 @@
 
 #pragma once
 
+#ifdef _WIN32
 #include <Windows.h>
+#else
+// UEVR bridge is Windows-only for now (the Proton-visible shared-memory
+// bridge is deferred). The Linux build compiles this header but init()
+// always fails, so monitor mode stays dormant.
+#include <chrono>
+#endif
 #include <cstdint>
 #include <cmath>
 #include <algorithm>
 
 #include "vrto3dlib/ue3d_protocol.h"
+
+#ifndef _WIN32
+namespace uevr::detail {
+inline uint64_t TickMs() {
+    using namespace std::chrono;
+    return (uint64_t)duration_cast<milliseconds>(
+        steady_clock::now().time_since_epoch()).count();
+}
+}
+#define GetTickCount64() ::uevr::detail::TickMs()
+#endif
 
 namespace uevr {
 
@@ -42,7 +60,9 @@ public:
 
     bool init() {
         if (m_data) return true;
-
+#ifndef _WIN32
+        return false;
+#else
         m_mapping = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, SHARED_MEM_NAME);
         if (!m_mapping) return false;
 
@@ -60,6 +80,7 @@ public:
         }
 
         return true;
+#endif
     }
 
     void shutdown() {
@@ -165,6 +186,7 @@ private:
     Receiver& operator=(const Receiver&) = delete;
 
     void cleanup() {
+#ifdef _WIN32
         if (m_data) {
             UnmapViewOfFile(m_data);
             m_data = nullptr;
@@ -173,9 +195,17 @@ private:
             CloseHandle(m_mapping);
             m_mapping = nullptr;
         }
+#else
+        m_data = nullptr;
+        m_mapping = nullptr;
+#endif
     }
 
+#ifdef _WIN32
     HANDLE m_mapping = nullptr;
+#else
+    void* m_mapping = nullptr;
+#endif
     SharedData* m_data = nullptr;
     uint32_t m_last_magic_mismatch = 0;
 };
