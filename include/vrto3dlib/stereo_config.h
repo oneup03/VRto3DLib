@@ -181,6 +181,9 @@ struct StereoDisplayDriverConfiguration
     // LeiaSR built-in head tracking (LeiaSrPresenter -> One-Euro filter ->
     // OpenTrack UDP -> open_track_port). Active only when output_mode==LeiaSR
     // AND use_open_track==true. Defaults mirror Simulated-Reality-OpenTrack-Bridge.
+    // sr_tracking_enabled=false mutes the built-in sender so an external
+    // OpenTrack source (OpenTrack app, VertoXR, ...) can feed the port instead.
+    bool  sr_tracking_enabled     = true;
     float sr_filter_pos_mincutoff = 0.08f;
     float sr_filter_pos_beta      = 0.08f;
     float sr_filter_rot_mincutoff = 0.12f;

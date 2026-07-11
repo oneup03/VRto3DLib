@@ -73,6 +73,7 @@ private:
         {"trk_flt_pos_dz", 0.02},
         {"trk_flt_zoom_smooth", 0.0},
         {"trk_flt_max_zoom", 10.0},
+        {"sr_tracking_enabled", true},
         {"sr_filter_pos_mincutoff", 0.08},
         {"sr_filter_pos_beta", 0.08},
         {"sr_filter_rot_mincutoff", 0.12},

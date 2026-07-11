@@ -432,6 +432,7 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.trk_flt_pos_dz = getValue<float>(jsonConfig, "trk_flt_pos_dz");
         config.trk_flt_zoom_smooth = getValue<float>(jsonConfig, "trk_flt_zoom_smooth");
         config.trk_flt_max_zoom = getValue<float>(jsonConfig, "trk_flt_max_zoom");
+        config.sr_tracking_enabled     = getValue<bool>(jsonConfig, "sr_tracking_enabled");
         config.sr_filter_pos_mincutoff = getValue<float>(jsonConfig, "sr_filter_pos_mincutoff");
         config.sr_filter_pos_beta      = getValue<float>(jsonConfig, "sr_filter_pos_beta");
         config.sr_filter_rot_mincutoff = getValue<float>(jsonConfig, "sr_filter_rot_mincutoff");
@@ -769,6 +770,7 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
     j["trk_flt_max_zoom"]    = config.trk_flt_max_zoom;
 
     // LeiaSR head tracking
+    j["sr_tracking_enabled"]     = config.sr_tracking_enabled;
     j["sr_filter_pos_mincutoff"] = config.sr_filter_pos_mincutoff;
     j["sr_filter_pos_beta"]      = config.sr_filter_pos_beta;
     j["sr_filter_rot_mincutoff"] = config.sr_filter_rot_mincutoff;
