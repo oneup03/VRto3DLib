@@ -284,10 +284,10 @@ nlohmann::ordered_json JsonManager::reorderFillJson(const nlohmann::json& target
 {
     nlohmann::ordered_json result;
     for (const auto& [key, source_value] : default_config_.items()) {
-        if (key == "user_settings" && target_json.contains(key)) {
-            result[key] = target_json.at(key);
-        }
-        else if (target_json.contains(key)) {
+        // A key present with a null value (hand-edit, older bug) is treated
+        // as missing - otherwise the null survives the rewrite and trips the
+        // typed read on every launch.
+        if (target_json.contains(key) && !target_json.at(key).is_null()) {
             result[key] = target_json.at(key);
         }
         else {
@@ -359,13 +359,21 @@ void JsonManager::EnsureDefaultConfigExists()
 //-----------------------------------------------------------------------------
 template <typename T>
 T JsonManager::getValue(const nlohmann::json& jsonConfig, const std::string& key) {
-    if (jsonConfig.contains(key)) {
+    if (jsonConfig.contains(key) && !jsonConfig[key].is_null()) {
         try {
             return jsonConfig[key].get<T>();
         } catch (const nlohmann::json::exception& e) {
             LOG() << "getValue: key \"" << key << "\" wrong type ("
                   << e.what() << "); using default";
         }
+    }
+    // Guard the fallback too: if the key was never added to default_config_,
+    // operator[] would insert null and get<T>() would throw straight out of
+    // the caller's entire load, silently defaulting every later key. Fail
+    // soft on just this key and make the omission loud in the log.
+    if (!default_config_.contains(key)) {
+        LOG() << "getValue: key \"" << key << "\" missing from default_config_ - add it!";
+        return T{};
     }
     return default_config_[key].get<T>();
 }

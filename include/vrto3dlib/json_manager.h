@@ -60,6 +60,8 @@ private:
         {"dash_enable", false},
         {"auto_focus", true},
         {"auto_exit", false},
+        {"hide_cursor", false},
+        {"lock_cursor", false},
         {"pitch_enable", false},
         {"yaw_enable", false},
         {"use_open_track", false},
