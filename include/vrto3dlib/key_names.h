@@ -28,10 +28,10 @@
 // "Pad_A/B/X/Y", "Pad_LB/RB/LT/RT", "Pad_Start/Back/Guide", "Pad_LS/RS",
 // "Pad_DPadUp/DPadDown/DPadLeft/DPadRight".
 //
-// Legacy names from key_mappings.h ("VK_*", "XINPUT_GAMEPAD_*") still parse
-// so existing configs keep working; MigrateName() rewrites them to the
-// portable spelling.
+// Legacy "VK_*" / "XINPUT_GAMEPAD_*" names still parse so existing configs
+// keep working; MigrateName() rewrites them to the portable spelling.
 
+#include <cstdint>
 #include <string>
 
 namespace vrto3d::keys {
@@ -45,5 +45,16 @@ std::string NameFromPadBits(int bits);
 
 bool IsLegacyName(const std::string& name);       // starts with "VK_" or "XINPUT_"
 std::string MigrateName(const std::string& name); // legacy -> portable; passthrough otherwise
+
+// Parse a keybind string (portable or legacy spelling; '+'-joined gamepad
+// combos) into a numeric code and gamepad flag. Returns false if nothing
+// resolved (code left 0). When migrate is true, name is rewritten in place to
+// the canonical portable spelling. Single source of truth for both the
+// profile loader and the OSD's live re-parse.
+bool ParseBind(std::string& name, int32_t& code, bool& xinput, bool migrate = true);
+
+// Keybind-type name ("switch"/"toggle"/"hold") -> SWITCH/TOGGLE/HOLD, or
+// `fallback` when unrecognized.
+int KeyBindTypeFromName(const std::string& name, int fallback = -1);
 
 }  // namespace vrto3d::keys

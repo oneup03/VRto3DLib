@@ -138,7 +138,7 @@
 
 // VRto3D extensions: guide button (bit 0x400 is unused by XInput's public
 // mask) plus trigger pseudo-buttons above the 16-bit range, so triggers can
-// be bound like buttons. Guarded — key_mappings.h defines them identically.
+// be bound like buttons. Guarded so a redefinition (e.g. by a newer SDK) is safe.
 #ifndef XINPUT_GAMEPAD_GUIDE
 #define XINPUT_GAMEPAD_GUIDE         0x400
 #endif
@@ -160,7 +160,7 @@
 #define XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
 #endif
 
-// Keybind types (guarded — key_mappings.h defines them identically).
+// Keybind types (guarded so a redefinition is harmless).
 #ifndef SWITCH
 #define SWITCH 1
 #endif

@@ -18,6 +18,8 @@
 #include "vrto3dlib/key_names.h"
 #include "vrto3dlib/key_codes.h"
 
+#include <cstdint>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -113,8 +115,8 @@ const std::unordered_map<std::string, int>& PortablePadTable()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Legacy keyboard/mouse names (mirrors key_mappings.h exactly;
-//          duplicated here because key_mappings.h requires windows.h)
+// Purpose: Legacy keyboard/mouse names (the pre-portable "VK_*" vocabulary),
+//          kept so older configs keep parsing and can be migrated
 //-----------------------------------------------------------------------------
 const std::unordered_map<std::string, int>& LegacyKeyTable()
 {
@@ -174,7 +176,7 @@ const std::unordered_map<std::string, int>& LegacyKeyTable()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Legacy gamepad names (mirrors key_mappings.h exactly)
+// Purpose: Legacy gamepad names (the pre-portable "XINPUT_GAMEPAD_*" vocabulary)
 //-----------------------------------------------------------------------------
 const std::unordered_map<std::string, int>& LegacyPadTable()
 {
@@ -287,6 +289,59 @@ std::string MigrateName(const std::string& name)
         return portable.empty() ? name : portable;
     }
     return name;  // unknown legacy name: leave for the caller to reject
+}
+
+bool ParseBind(std::string& name, int32_t& code, bool& xinput, bool migrate)
+{
+    code = 0;
+    xinput = false;
+    if (name.empty()) {
+        return false;
+    }
+
+    const int key = KeyCodeFromName(name);
+    if (key >= 0) {
+        code = key;
+        xinput = false;
+        if (migrate) {
+            name = MigrateName(name);
+        }
+        return true;
+    }
+
+    // A '+' means a gamepad chord; a bare gamepad name is the single-button case.
+    if (PadBitsFromName(name) >= 0 || name.find('+') != std::string::npos) {
+        std::string migrated;
+        std::stringstream ss(name);
+        std::string tok;
+        while (std::getline(ss, tok, '+')) {
+            const int bits = PadBitsFromName(tok);
+            if (bits >= 0) {
+                code |= bits;
+                if (migrate) {
+                    if (!migrated.empty()) migrated += '+';
+                    migrated += MigrateName(tok);
+                }
+            }
+        }
+        if (code != 0) {
+            xinput = true;
+            if (migrate) {
+                name = migrated;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+int KeyBindTypeFromName(const std::string& name, int fallback)
+{
+    static const std::unordered_map<std::string, int> table = {
+        {"switch", SWITCH}, {"toggle", TOGGLE}, {"hold", HOLD},
+    };
+    const auto it = table.find(name);
+    return it != table.end() ? it->second : fallback;
 }
 
 }  // namespace vrto3d::keys

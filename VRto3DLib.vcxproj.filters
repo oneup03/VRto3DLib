@@ -17,9 +17,6 @@
     <ClInclude Include="include\vrto3dlib\json_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vrto3dlib\key_mappings.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\vrto3dlib\overlay_mgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>

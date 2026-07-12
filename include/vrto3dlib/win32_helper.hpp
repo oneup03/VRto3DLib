@@ -34,7 +34,6 @@
 #include <XInput.h>
 
 #include "vrto3dlib/debug_log.hpp"
-#include "vrto3dlib/key_mappings.h"
 #include "vrto3dlib/hotkey_eval.hpp"
 #include "vrto3dlib/stereo_config.h"
 
@@ -51,11 +50,25 @@
 // We can't rely on these existing on Win7 though, so if we fail to load them
 // don't treat it as fatal and continue using the original one.
 //-----------------------------------------------------------------------------
-static HMODULE xinput_lib;
 typedef DWORD(WINAPI* tXInputGetState)(DWORD dwUserIndex, XINPUT_STATE* pState);
-static tXInputGetState _XInputGetState = XInputGetState;
-static void SwitchToXinpuGetStateEx()
+
+// One shared XInput entry point across ALL translation units. A header-scope
+// `static` pointer is a distinct object per TU; because GetXInputButtonState()
+// is inline the linker folds it to a single copy bound to just one TU's static,
+// so SwitchToXinpuGetStateEx() (only called from one TU) would not affect the
+// pointer the surviving GetXInputButtonState() actually reads — silently
+// disabling the Guide button. A function-local static in an inline function is
+// one instance program-wide, so switching it once is safe.
+inline tXInputGetState& XInputGetStateRef()
 {
+    static tXInputGetState fn = XInputGetState;
+    return fn;
+}
+#define _XInputGetState (XInputGetStateRef())
+
+inline void SwitchToXinpuGetStateEx()
+{
+    static HMODULE xinput_lib = nullptr;
     tXInputGetState XInputGetStateEx;
 
     if (xinput_lib)

@@ -19,7 +19,7 @@
 #include "vrto3dlib/json_manager.h"
 #include "vrto3dlib/debug_log.hpp"
 #ifdef _WIN32
-#include "vrto3dlib/key_mappings.h"
+#include "vrto3dlib/key_codes.h"
 #include "vrto3dlib/win32_helper.hpp"
 
 #include <windows.h>
@@ -144,59 +144,18 @@ const FramePackTimingSpec* GetFramePackTimingSpec(OutputMode m)
 }
 
 
-#ifndef _WIN32
-// key_mappings.h is Windows-only; mirror the bind-type map here.
-static std::unordered_map<std::string, int> KeyBindTypes = {
-    {"switch", SWITCH}, {"toggle", TOGGLE}, {"hold", HOLD}
-};
-#endif
-
 //-----------------------------------------------------------------------------
 // Purpose: Parse a keybind name into a key code / gamepad bitmask. Accepts the
 // portable vocabulary ("Key_A", "Numpad7", "Pad_A", "Pad_Start+Pad_DPadDown")
 // and, for migration, the legacy VK_*/XINPUT_* spellings. The *_str fields
 // keep whatever canonical (portable) spelling MigrateName produces, so the
-// next profile save rewrites legacy names in place.
+// next profile save rewrites legacy names in place. Thin wrapper over the
+// shared parser in key_names — adds only the load-time diagnostic.
 //-----------------------------------------------------------------------------
 static bool ParseBindName(std::string& name, int32_t& code, bool& xinput)
 {
-    code = 0;
-    xinput = false;
-    if (name.empty())
-        return false;
-
-    auto split_tokens = [](const std::string& s) {
-        std::vector<std::string> out;
-        std::stringstream ss(s);
-        std::string tok;
-        while (std::getline(ss, tok, '+'))
-            out.push_back(tok);
-        return out;
-    };
-
-    const int key = vrto3d::keys::KeyCodeFromName(name);
-    if (key >= 0) {
-        code = key;
-        xinput = false;
-        name = vrto3d::keys::MigrateName(name);
+    if (vrto3d::keys::ParseBind(name, code, xinput, /*migrate=*/true))
         return true;
-    }
-    if (vrto3d::keys::PadBitsFromName(name) >= 0 || name.find('+') != std::string::npos) {
-        std::string migrated;
-        for (const auto& tok : split_tokens(name)) {
-            const int bits = vrto3d::keys::PadBitsFromName(tok);
-            if (bits >= 0) {
-                code |= bits;
-                if (!migrated.empty()) migrated += '+';
-                migrated += vrto3d::keys::MigrateName(tok);
-            }
-        }
-        if (code != 0) {
-            xinput = true;
-            name = migrated;
-            return true;
-        }
-    }
     LOG() << "Unknown keybind name: " << name.c_str();
     return false;
 }
@@ -554,7 +513,7 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         ParseBindName(config.ctrl_toggle_str, config.ctrl_toggle_key, config.ctrl_xinput);
 
         config.ctrl_type_str = getValue<std::string>(jsonConfig, "ctrl_toggle_type");
-        config.ctrl_type = KeyBindTypes[config.ctrl_type_str];
+        config.ctrl_type = vrto3d::keys::KeyBindTypeFromName(config.ctrl_type_str, 0);
 
         config.pitch_radius = getValue<float>(jsonConfig, "pitch_radius");
         config.ctrl_deadzone = getValue<float>(jsonConfig, "ctrl_deadzone");
@@ -595,8 +554,9 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
             }
 
             config.user_type_str[i] = user_setting.at("user_key_type").get<std::string>();
-            if (KeyBindTypes.find(config.user_type_str[i]) != KeyBindTypes.end()) {
-                config.user_key_type[i] = KeyBindTypes[config.user_type_str[i]];
+            const int user_kt = vrto3d::keys::KeyBindTypeFromName(config.user_type_str[i]);
+            if (user_kt >= 0) {
+                config.user_key_type[i] = user_kt;
             }
 
             // Each preset value can be a scalar (legacy) or an array (cycle).
