@@ -134,13 +134,23 @@ struct StereoDisplayDriverConfiguration
     // Cross-process cursor control over the connected game's window. Polled
     // from MockControllerDeviceDriver::CursorControlThread while the game is
     // foreground.
-    //   hide_cursor: SetCursor(NULL) on the game's input queue each tick to
-    //     hide the OS cursor over the game window (for games that don't
-    //     manage cursor visibility themselves under windowed mode).
-    //   lock_cursor: ClipCursor to the game window's rect each tick to
-    //     emulate the FSE-style mouse confinement under windowed mode.
+    //   hide_cursor: blank out the system cursor set (SetSystemCursor) and
+    //     re-assert SetCursor(NULL) on the game's input queue each tick so
+    //     the OS cursor is fully invisible while the game is focused.
+    //   lock_cursor: ClipCursor to the focused game window's client rect each
+    //     tick to emulate the FSE-style mouse confinement under windowed mode.
     bool hide_cursor         = false;
     bool lock_cursor         = false;
+    // Stereo cursor: hides the hardware cursor (drawn flat by the OS at
+    // screen depth, misplaced on folded SbS/TaB layouts) and draws a per-eye
+    // arrow into both halves of the composited frame at the OS cursor
+    // position instead.
+    //   cursor_depth: per-eye horizontal shift in pixels; 0 = screen plane,
+    //     positive pushes the cursor into the screen, negative pops it out.
+    //   cursor_size: arrow height in per-eye pixels.
+    bool    stereo_cursor    = false;
+    float   cursor_depth     = 0.0f;
+    int32_t cursor_size      = 32;
 
     // Display-correction shader pass — applied to the final composited SbS
     // texture (post-OSD, pre-presenter) to reduce visible crosstalk on

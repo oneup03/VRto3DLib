@@ -382,6 +382,9 @@ void JsonManager::LoadParamsFromJson(StereoDisplayDriverConfiguration& config)
         config.auto_exit = getValue<bool>(jsonConfig, "auto_exit");
         config.hide_cursor = getValue<bool>(jsonConfig, "hide_cursor");
         config.lock_cursor = getValue<bool>(jsonConfig, "lock_cursor");
+        config.stereo_cursor = getValue<bool>(jsonConfig, "stereo_cursor");
+        config.cursor_depth = getValue<float>(jsonConfig, "cursor_depth");
+        config.cursor_size = getValue<int>(jsonConfig, "cursor_size");
         config.use_open_track = getValue<bool>(jsonConfig, "use_open_track");
         config.open_track_port = getValue<int>(jsonConfig, "open_track_port");
         config.use_track_filter = getValue<bool>(jsonConfig, "use_track_filter");
@@ -468,6 +471,24 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         }
         if (jsonConfig.contains("auto_depth_smoothing")) {
             config.auto_depth_smoothing = getValue<float>(jsonConfig, "auto_depth_smoothing");
+        }
+
+        // Cursor controls — guarded so older profiles without the keys keep
+        // the current (default-config) values.
+        if (jsonConfig.contains("hide_cursor")) {
+            config.hide_cursor = getValue<bool>(jsonConfig, "hide_cursor");
+        }
+        if (jsonConfig.contains("lock_cursor")) {
+            config.lock_cursor = getValue<bool>(jsonConfig, "lock_cursor");
+        }
+        if (jsonConfig.contains("stereo_cursor")) {
+            config.stereo_cursor = getValue<bool>(jsonConfig, "stereo_cursor");
+        }
+        if (jsonConfig.contains("cursor_depth")) {
+            config.cursor_depth = getValue<float>(jsonConfig, "cursor_depth");
+        }
+        if (jsonConfig.contains("cursor_size")) {
+            config.cursor_size = getValue<int>(jsonConfig, "cursor_size");
         }
 
         // Display-correction shader pass — all keys guarded so older profiles
@@ -618,6 +639,11 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
     jsonConfig["auto_depth_enabled"] = config.auto_depth_enabled;
     jsonConfig["auto_depth_target_disparity"] = config.auto_depth_target_disparity;
     jsonConfig["auto_depth_smoothing"] = config.auto_depth_smoothing;
+    jsonConfig["hide_cursor"] = config.hide_cursor;
+    jsonConfig["lock_cursor"] = config.lock_cursor;
+    jsonConfig["stereo_cursor"] = config.stereo_cursor;
+    jsonConfig["cursor_depth"] = config.cursor_depth;
+    jsonConfig["cursor_size"] = config.cursor_size;
     jsonConfig["shader_enabled"] = config.shader_enabled;
     jsonConfig["shader_lift"]  = { config.shader_lift[0],  config.shader_lift[1],  config.shader_lift[2]  };
     jsonConfig["shader_gamma"] = { config.shader_gamma[0], config.shader_gamma[1], config.shader_gamma[2] };
@@ -713,6 +739,9 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
     j["auto_exit"]       = config.auto_exit;
     j["hide_cursor"]     = config.hide_cursor;
     j["lock_cursor"]     = config.lock_cursor;
+    j["stereo_cursor"]   = config.stereo_cursor;
+    j["cursor_depth"]    = config.cursor_depth;
+    j["cursor_size"]     = config.cursor_size;
 
     // Controller / tracking inputs
     j["pitch_enable"]    = config.pitch_enable;
