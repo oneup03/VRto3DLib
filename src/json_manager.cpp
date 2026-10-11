@@ -519,6 +519,21 @@ bool JsonManager::LoadProfileFromJson(const std::string& filename, StereoDisplay
         if (jsonConfig.contains("shader_curve_offset_both")) {
             config.shader_curve_off_both = getValue<float>(jsonConfig, "shader_curve_offset_both");
         }
+        if (jsonConfig.contains("shader_ghost_contrast")) {
+            config.shader_ghost_contrast = getValue<float>(jsonConfig, "shader_ghost_contrast");
+        }
+        if (jsonConfig.contains("shader_ghost_lift")) {
+            config.shader_ghost_lift = getValue<float>(jsonConfig, "shader_ghost_lift");
+        }
+        if (jsonConfig.contains("sr_crosstalk_mode")) {
+            config.sr_crosstalk_mode = getValue<std::string>(jsonConfig, "sr_crosstalk_mode");
+        }
+        if (jsonConfig.contains("sr_crosstalk_strength")) {
+            config.sr_crosstalk_strength = getValue<float>(jsonConfig, "sr_crosstalk_strength");
+        }
+        if (jsonConfig.contains("sr_weaver_contrast")) {
+            config.sr_weaver_contrast = getValue<float>(jsonConfig, "sr_weaver_contrast");
+        }
 
         // Controller settings
         config.pitch_enable = getValue<bool>(jsonConfig, "pitch_enable");
@@ -652,6 +667,11 @@ void JsonManager::SaveProfileToJson(const std::string& filename, StereoDisplayDr
     jsonConfig["shader_curve_offset_low"]  = config.shader_curve_off_low;
     jsonConfig["shader_curve_offset_high"] = config.shader_curve_off_high;
     jsonConfig["shader_curve_offset_both"] = config.shader_curve_off_both;
+    jsonConfig["shader_ghost_contrast"] = config.shader_ghost_contrast;
+    jsonConfig["shader_ghost_lift"] = config.shader_ghost_lift;
+    jsonConfig["sr_crosstalk_mode"] = config.sr_crosstalk_mode;
+    jsonConfig["sr_crosstalk_strength"] = config.sr_crosstalk_strength;
+    jsonConfig["sr_weaver_contrast"] = config.sr_weaver_contrast;
     jsonConfig["pitch_enable"] = config.pitch_enable;
     jsonConfig["yaw_enable"] = config.yaw_enable;
     jsonConfig["pose_reset_key"] = config.pose_reset_str;
@@ -731,6 +751,11 @@ void JsonManager::SaveFullConfigToJson(const std::string& filename, StereoDispla
     j["shader_curve_offset_low"]     = config.shader_curve_off_low;
     j["shader_curve_offset_high"]    = config.shader_curve_off_high;
     j["shader_curve_offset_both"]    = config.shader_curve_off_both;
+    j["shader_ghost_contrast"]       = config.shader_ghost_contrast;
+    j["shader_ghost_lift"]           = config.shader_ghost_lift;
+    j["sr_crosstalk_mode"]           = config.sr_crosstalk_mode;
+    j["sr_crosstalk_strength"]       = config.sr_crosstalk_strength;
+    j["sr_weaver_contrast"]          = config.sr_weaver_contrast;
 
     // Misc / system
     j["disable_hotkeys"] = config.disable_hotkeys;

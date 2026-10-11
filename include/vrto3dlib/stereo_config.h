@@ -165,6 +165,25 @@ struct StereoDisplayDriverConfiguration
     float shader_curve_off_low      = 0.0f;
     float shader_curve_off_high     = 0.0f;
     float shader_curve_off_both     = 0.0f;
+    // Ghost reduction — runs last in the pass, in linear light, so it
+    // compresses what actually reaches the display. Both are exact no-ops at
+    // their defaults.
+    //   ghost_contrast: squeezes toward mid-grey, shrinking the difference
+    //                   between the eyes (1.0 = off).
+    //   ghost_lift:     raises the black floor so a display that cancels
+    //                   crosstalk itself (e.g. the LeiaSR weaver) has room
+    //                   below black instead of clipping (0.0 = off).
+    float shader_ghost_contrast     = 1.0f;
+    float shader_ghost_lift         = 0.0f;
+    // LeiaSR only: the weaver's own crosstalk cancellation, relative to the
+    // panel's measured defaults. These are display settings, applied whether
+    // or not shader_enabled is on.
+    //   sr_crosstalk_mode:     "default" (the panel's own), "off", "static", "dynamic"
+    //   sr_crosstalk_strength: multiple of the panel's factors (1.0 = as shipped)
+    //   sr_weaver_contrast:    multiple of the weaver's contrast (0.5..1.0)
+    std::string sr_crosstalk_mode     = "default";
+    float       sr_crosstalk_strength = 1.0f;
+    float       sr_weaver_contrast    = 1.0f;
 
     // Computed at driver activation from the target monitor (display_index).
     // Not read from JSON.

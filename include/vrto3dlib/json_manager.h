@@ -104,6 +104,11 @@ private:
         {"shader_curve_offset_low",  0.0},
         {"shader_curve_offset_high", 0.0},
         {"shader_curve_offset_both", 0.0},
+        {"shader_ghost_contrast", 1.0},
+        {"shader_ghost_lift", 0.0},
+        {"sr_crosstalk_mode", "default"},
+        {"sr_crosstalk_strength", 1.0},
+        {"sr_weaver_contrast", 1.0},
         {"user_settings", {
             {
                 {"user_load_key", "Numpad1"},
